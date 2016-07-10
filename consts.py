@@ -11,7 +11,7 @@ DEFAULT_SERVER_PORT = 9191
 CODE_FIND_SERVER = 1
 
 # Server Settings
-FIND_SERVER_TIMEOUT = 1  # 10 Seconds
+FIND_SERVER_TIMEOUT = 5  # 10 Seconds
 
 
 SETTINGS_FILE = 'settings.ini'
