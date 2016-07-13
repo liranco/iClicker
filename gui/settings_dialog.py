@@ -1,5 +1,7 @@
 from PySide.QtGui import *
+from PySide.QtCore import Qt
 from utils import Settings
+from consts import *
 
 settings = Settings()
 
@@ -10,14 +12,15 @@ class SettingsDialog(QDialog):
         self.setWindowTitle('Mazgan Settings')
         layout = QVBoxLayout()
         self.mode = QComboBox(self)
-        self.mode.addItems(['Server', 'Client'])
+        self.mode.addItems((CLIENT_MODE, SERVER_MODE))
 
         self.settings_groups = QStackedWidget(self)
         self.settings_groups.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.settings_groups.addWidget(ServerSettings(self))
         self.settings_groups.addWidget(ClientSettings(self))
+        self.settings_groups.addWidget(ServerSettings(self))
 
         self.mode.currentIndexChanged.connect(self.settings_groups.setCurrentIndex)
+        self.settings_groups.currentChanged.connect(self.mode_changed)
 
         mode_container = QWidget(self)
         mode_container.setLayout(QFormLayout())
@@ -32,12 +35,19 @@ class SettingsDialog(QDialog):
 
         self.setLayout(layout)
 
+        self.mode.setCurrentIndex(self.mode.findText(settings.mode))
+
+    def mode_changed(self, new_index):
+        print new_index
+        mode = self.settings_groups.widget(new_index)
+        print mode
+
 
 class ServerSettings(QGroupBox):
     def __init__(self, parent=None):
         super(ServerSettings, self).__init__(title="Server Settings", parent=parent)
         layout = QFormLayout()
-        self.server_name = QLineEdit(settings.server_name, parent=self)
+        self.server_name = QLineEdit(settings.identifier_name, parent=self)
         self.server_port = QSpinBox(parent=self)
         self.server_port.setMaximum(65535)
         self.server_port.setValue(settings.server_port)
@@ -51,6 +61,20 @@ class ClientSettings(QGroupBox):
     def __init__(self, parent=None):
         super(ClientSettings, self).__init__(title="Client Settings", parent=parent)
         layout = QFormLayout()
-        self.server_name = QLineEdit(settings.server_name, parent=self)
-        layout.addRow("Client Name", self.server_name)
+        self.client_name = QLineEdit(settings.identifier_name, parent=self)
+        layout.addRow("Client Name", self.client_name)
+        self.servers = QListWidget(self)
+        layout.addRow(self.servers)
+        reload_servers = QPushButton("Re/Load Servers")
+        reload_servers.clicked.connect(self.reload_servers)
+        layout.addRow(reload_servers)
         self.setLayout(layout)
+        # self.reload_servers()
+
+    def reload_servers(self):
+        # First, empty the list
+        self.servers.clear()
+        from client import find_servers
+        for server_name, port, ip_address in find_servers():
+            item = QListWidgetItem("{} ({}:{})".format(server_name, ip_address, port), view=self.servers)
+            item.setData(Qt.UserRole, (server_name, port, ip_address))

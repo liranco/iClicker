@@ -36,11 +36,11 @@ class Settings(QSettings):
         self.setFallbacksEnabled(False)
 
     @property
-    def server_name(self):
-        return self.value("server_name")
+    def identifier_name(self):
+        return self.value("server_name", "New Server")
 
-    @server_name.setter
-    def server_name(self, value):
+    @identifier_name.setter
+    def identifier_name(self, value):
         self.setValue("server_name", value)
 
     @property

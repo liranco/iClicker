@@ -1,6 +1,6 @@
 # General settings
-SERVER_MODE = 'server'
-CLIENT_MODE = 'client'
+SERVER_MODE = 'Server'
+CLIENT_MODE = 'Client'
 
 # Ports
 SERVER_BROADCAST_PORT = 1919

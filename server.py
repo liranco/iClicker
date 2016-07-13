@@ -10,7 +10,7 @@ class BroadcastsHandler(SocketServer.DatagramRequestHandler):
         data = json.loads(self.rfile.read())
         code = data['code']
         if code == CODE_FIND_SERVER:
-            self.wfile.write(json.dumps(dict(server_name=Settings().server_name, port=Settings().server_port)))
+            self.wfile.write(json.dumps(dict(server_name=Settings().identifier_name, port=Settings().server_port)))
 
 
 def answer_search_requests(threaded=True):
