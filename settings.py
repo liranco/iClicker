@@ -20,6 +20,24 @@ class Settings(QSettings):
         super(Settings, self).__init__(os.path.join(os.path.dirname(__file__), SETTINGS_FILE), QSettings.IniFormat)
         self.setFallbacksEnabled(False)
 
+        self.server_settings = ServerSettings(self)
+        self.client_settings = ClientSettings(self)
+
+    @property
+    def mode(self):
+        return self.value("run_mode", CLIENT_MODE)
+
+    @mode.setter
+    def mode(self, value):
+        self.setValue("run_mode", value)
+
+
+class ServerSettings(object):
+    def __init__(self, settings):
+        self._settings = settings         # type: Settings
+        self.value = settings.value
+        self.setValue = settings.setValue
+
     @property
     def server_name(self):
         return self.value("server_name", "New Server")
@@ -39,6 +57,21 @@ class Settings(QSettings):
         self.setValue("server_password", (sha1(value).hexdigest(), len(value)))
 
     @property
+    def server_port(self):
+        return self.value("server_port", DEFAULT_SERVER_PORT)
+
+    @server_port.setter
+    def server_port(self, value):
+        self.setValue("server_port", value)
+
+
+class ClientSettings(object):
+    def __init__(self, settings):
+        self._settings = settings         # type: Settings
+        self.value = settings.value
+        self.setValue = settings.setValue
+
+    @property
     def client_name(self):
         import platform
         return self.value("client_name", platform.node())
@@ -48,17 +81,10 @@ class Settings(QSettings):
         self.setValue("client_name", value)
 
     @property
-    def server_port(self):
-        return self.value("server_port", DEFAULT_SERVER_PORT)
+    def connected_server(self):
+        return self.value('connected_server', None)
 
-    @server_port.setter
-    def server_port(self, value):
-        self.setValue("server_port", value)
-
-    @property
-    def mode(self):
-        return self.value("run_mode", CLIENT_MODE)
-
-    @mode.setter
-    def mode(self, value):
-        self.setValue("run_mode", value)
+    @connected_server.setter
+    def connected_server(self, value):
+        server_name, server_ip, port = value
+        self.setValue(server_name, server_ip, port)

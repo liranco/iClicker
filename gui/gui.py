@@ -11,8 +11,6 @@ class Menu(QMenu):
         self.settings = Settings()
         if self.settings.mode == SERVER_MODE:
             self.announce()
-        find_action = self.addAction('Find')
-        find_action.triggered.connect(self.find)
         settings_action = self.addAction('Settings')
         settings_action.triggered.connect(self.open_settings)
         exit_action = self.addAction('Exit')
@@ -20,16 +18,10 @@ class Menu(QMenu):
 
     def announce(self):
         from server import answer_search_requests
-        print 'announcing'
         answer_search_requests()
-
-    def find(self):
-        from client import find_servers
-        print find_servers()
 
     def open_settings(self):
         SettingsDialog().exec_()
-        print 'out'
 
 
 class Tray(QSystemTrayIcon):

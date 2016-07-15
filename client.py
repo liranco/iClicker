@@ -10,7 +10,7 @@ def find_servers():
     s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
     s.bind(('192.168.1.19', 0))
     s.sendto(json.dumps(dict(code=CODE_FIND_SERVER)), ('255.255.255.255', SERVER_BROADCAST_PORT))
-    s.settimeout(2)
+    s.settimeout(0.5)
     start_time = time()
 
     def receive():
@@ -28,4 +28,5 @@ def find_servers():
             if server_info not in found_servers:
                 found_servers.add(server_info)
                 yield server_info
+        yield None
         data = receive()
