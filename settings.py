@@ -29,6 +29,16 @@ class Settings(QSettings):
         self.setValue("server_name", value)
 
     @property
+    def server_password(self):
+        sha1, password_length = self.value("server_password", [None, 0])
+        return sha1, int(password_length)
+
+    @server_password.setter
+    def server_password(self, value):
+        from hashlib import sha1
+        self.setValue("server_password", (sha1(value).hexdigest(), len(value)))
+
+    @property
     def client_name(self):
         import platform
         return self.value("client_name", platform.node())

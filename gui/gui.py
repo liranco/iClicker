@@ -1,6 +1,6 @@
 import sys
 from PySide.QtGui import QSystemTrayIcon, QMenu, QApplication, QIcon, QMessageBox
-from utils import Settings
+from settings import Settings
 from settings_dialog import SettingsDialog
 from consts import *
 

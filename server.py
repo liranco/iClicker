@@ -1,6 +1,6 @@
 import json
 from consts import *
-from utils import Settings
+from settings import Settings
 from threading import Thread
 import SocketServer
 

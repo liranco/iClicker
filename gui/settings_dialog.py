@@ -1,6 +1,6 @@
 from PySide.QtGui import *
 from PySide.QtCore import *
-from utils import Settings
+from settings import Settings
 from consts import *
 
 settings = Settings()
@@ -20,7 +20,6 @@ class SettingsDialog(QDialog):
         self.settings_groups.addWidget(ServerSettings(self))
 
         self.mode.currentIndexChanged.connect(self.settings_groups.setCurrentIndex)
-        self.settings_groups.currentChanged.connect(self.mode_changed)
 
         mode_container = QWidget(self)
         mode_container.setLayout(QFormLayout())
@@ -37,11 +36,6 @@ class SettingsDialog(QDialog):
 
         self.mode.setCurrentIndex(self.mode.findText(settings.mode))
 
-    def mode_changed(self, new_index):
-        print new_index
-        mode = self.settings_groups.widget(new_index)
-        print mode
-
 
 class ServerSettings(QGroupBox):
     def __init__(self, parent=None):
@@ -51,10 +45,18 @@ class ServerSettings(QGroupBox):
         self.server_port = QSpinBox(parent=self)
         self.server_port.setMaximum(65535)
         self.server_port.setValue(settings.server_port)
+        self.server_password = QLineEdit('x' * settings.server_password[1], parent=self)
+        self.server_password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        self.server_password.changed = False
+        self.server_password.textChanged.connect(self.password_changed)
         layout.addRow("Server Name:", self.server_name)
         layout.addRow("Server Port:", self.server_port)
+        layout.addRow("Password:", self.server_password)
         layout.addRow(QPushButton('Calibrate Clicker', parent=self))
         self.setLayout(layout)
+
+    def password_changed(self):
+        self.server_password.changed = True
 
 
 class ClientSettings(QGroupBox):
@@ -75,7 +77,7 @@ class ClientSettings(QGroupBox):
         layout.addRow(self.reload_servers_button)
         self.setLayout(layout)
         self.servers_finder_thread = None
-        # self.reload_servers()
+        self.reload_servers()
 
     def reload_servers(self):
         # First, empty the list
