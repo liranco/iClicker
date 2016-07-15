@@ -1,24 +1,9 @@
 import os
 from PySide.QtCore import QSettings
-from PySide.QtGui import QDialog, QFormLayout
 
 from consts import *
 
 
-def singleton(cls):
-    """
-    http://stackoverflow.com/questions/674304
-    """
-    instances = {}
-
-    def get_instance():
-        if cls not in instances:
-            instances[cls] = cls()
-        return instances[cls]
-    return get_instance
-
-
-# @singleton
 class Settings(QSettings):
     _singleton_object = None
 
@@ -36,12 +21,21 @@ class Settings(QSettings):
         self.setFallbacksEnabled(False)
 
     @property
-    def identifier_name(self):
+    def server_name(self):
         return self.value("server_name", "New Server")
 
-    @identifier_name.setter
-    def identifier_name(self, value):
+    @server_name.setter
+    def server_name(self, value):
         self.setValue("server_name", value)
+
+    @property
+    def client_name(self):
+        import platform
+        return self.value("client_name", platform.node())
+
+    @client_name.setter
+    def client_name(self, value):
+        self.setValue("client_name", value)
 
     @property
     def server_port(self):

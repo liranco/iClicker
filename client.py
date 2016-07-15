@@ -24,6 +24,8 @@ def find_servers():
     while data or ((time() - start_time) < FIND_SERVER_TIMEOUT):
         if data:
             data, (ip_address, _) = json.loads(data[0]), data[1]
-            found_servers.add((data['server_name'], data['port'], ip_address))
+            server_info = (data['server_name'], ip_address, data['port'])
+            if server_info not in found_servers:
+                found_servers.add(server_info)
+                yield server_info
         data = receive()
-    return found_servers
