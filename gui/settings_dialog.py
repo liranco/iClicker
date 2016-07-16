@@ -77,7 +77,13 @@ class ServerSettings(QGroupBox):
 
 class ClientSettings(QGroupBox):
     LOAD_SERVERS_TEXT = "Load Servers"
-    STOP_LOADING_SERVERS_TEXT = "Stop"
+    STOP_LOADING_SERVERS_TEXT = "Click to Stop."
+
+    CURRENT_SERVER_NOT_SET = ("Not Set", Qt.red)
+    CURRENT_SERVER_CONNECTING = ('Connecting to "{}"...', Qt.darkYellow)
+    CURRENT_SERVER_OFFLINE = ('"{}" is Offline', Qt.red)
+    CURRENT_SERVER_CONNECTED = ('Connected to "{}"!', Qt.green)
+    CURRENT_SERVER_ERROR = ('Error on "{}"!', Qt.red)
 
     def __init__(self, parent=None):
         super(ClientSettings, self).__init__(title="Client Settings", parent=parent)
@@ -86,19 +92,26 @@ class ClientSettings(QGroupBox):
         layout.addRow("Client Name", self.client_name)
         current_server_row = QWidget(parent=self)
         current_server_row.setLayout(QHBoxLayout())
-        self.current_server = QLabel("Hello World", parent=current_server_row)
-        self.current_server_disconnect = QPushButton('Disconnect', parent=current_server_row)
-        current_server_row.layout().addWidget(self.current_server)
-        current_server_row.layout().addWidget(self.current_server_disconnect)
-        current_server_row.setVisible(False)
-        layout.addRow(current_server_row)
+        current_server_row.layout().setContentsMargins(0, 0, 0, 0)
+        self.current_server_ip = QLineEdit(parent=current_server_row)
+        self.current_server_ip.setPlaceholderText("IP Address")
+        self.current_server_port = QSpinBox(parent=current_server_row)
+        self.current_server_port.setMaximum(65535)
+        self.current_server_message = QLabel(parent=current_server_row)
+        self._set_current_server_message(*self.CURRENT_SERVER_NOT_SET)
+        current_server_row.layout().addWidget(self.current_server_ip)
+        current_server_row.layout().addWidget(self.current_server_port)
+        current_server_row.layout().addWidget(self.current_server_message)
+        # current_server_row.setVisible(False)
+        layout.addRow("Current Server:", current_server_row)
         # Setup servers search
         self.servers = QListWidget(self)
-        layout.addRow(self.servers)
+        self.servers.currentItemChanged.connect(self.server_picked_from_list)
+        layout.addRow('Pick a server:', self.servers)
         self.progress_bar = QProgressBar(self)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("Hello World")
         self.progress_bar.setHidden(True)
-        self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximum(0)
         layout.addRow(self.progress_bar)
         self.reload_servers_button = QPushButton(self.LOAD_SERVERS_TEXT)
         self.reload_servers_button.clicked.connect(self.reload_servers)
@@ -106,29 +119,50 @@ class ClientSettings(QGroupBox):
         self.setLayout(layout)
         self.servers_finder_thread = None
 
+    def _set_current_server_message(self, message, color):
+        palette = QPalette()
+        palette.setColor(QPalette.WindowText, color)
+        self.current_server_message.setPalette(palette)
+        self.current_server_message.setText(message)
+
     def reload_servers(self):
         # First, empty the list
         if self.servers_finder_thread is None:
             self.servers.clear()
             self.servers_finder_thread = ServersFinderThread(self)
-            self.servers_finder_thread.server_found.connect(self.server_found)
-            self.servers_finder_thread.started.connect(lambda: self.progress_bar.setVisible(True))
+            self.servers_finder_thread.server_found.connect(self.server_search_found_item)
+            self.servers_finder_thread.text_changed.connect(
+                lambda text: self.reload_servers_button.setText("%s %s" % (text, self.STOP_LOADING_SERVERS_TEXT)))
+            self.servers_finder_thread.started.connect(self.server_search_started)
             self.servers_finder_thread.finished.connect(self.server_search_finished)
-            self.reload_servers_button.setText(self.STOP_LOADING_SERVERS_TEXT)
             self.servers_finder_thread.start()
         else:
             self.servers_finder_thread.stop_me()
 
-    def server_found(self, server_info):
+    def server_search_started(self):
+        self.progress_bar.setVisible(True)
+        self.reload_servers_button.setText(self.STOP_LOADING_SERVERS_TEXT)
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.setValue(0)
+
+    def server_search_found_item(self, server_info):
         server_name, ip_address, port = server_info
         item = QListWidgetItem("{} ({}:{})".format(server_name, ip_address, port), view=self.servers)
-        item.setData(Qt.UserRole, (server_name, port, ip_address))
+        item.setData(Qt.UserRole, (server_name, ip_address, port))
 
     def server_search_finished(self):
         self.progress_bar.setVisible(False)
         del self.servers_finder_thread
         self.servers_finder_thread = None
         self.reload_servers_button.setText(self.LOAD_SERVERS_TEXT)
+
+    def server_picked_from_list(self, item):
+        if item is None:
+            return
+        server_name, ip_address, port = item.data(Qt.UserRole)
+        self.current_server_ip.setText(ip_address)
+        self.current_server_port.setValue(port)
 
     def activated(self):
         self.client_name.setText(settings.client_settings.client_name)
@@ -143,6 +177,9 @@ class ClientSettings(QGroupBox):
 
 class ServersFinderThread(QThread):
     server_found = Signal(object)
+    text_changed = Signal(str)
+
+    TEXT_TEMPLATE = 'Searching interface "%s"...'
 
     def __init__(self, parent):
         self._stopping = False
@@ -150,9 +187,14 @@ class ServersFinderThread(QThread):
 
     def run(self):
         from client import find_servers
-        for result in find_servers():
+        prev_interface = None
+        for interface, result in find_servers():
             if self._stopping:
                 break
+            if interface != prev_interface:
+                self.text_changed.emit(self.TEXT_TEMPLATE % interface)
+                prev_interface = interface
+                print interface
             if result:
                 self.server_found.emit(result)
 

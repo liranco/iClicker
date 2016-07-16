@@ -1,3 +1,4 @@
+import os
 import sys
 from PySide.QtGui import QSystemTrayIcon, QMenu, QApplication, QIcon, QMessageBox
 from settings import Settings
@@ -27,7 +28,7 @@ class Menu(QMenu):
 class Tray(QSystemTrayIcon):
     def __init__(self):
         super(Tray, self).__init__()
-        self.setIcon(QIcon(r'C:\ProgramData\Razer\GameScanner\Data\GameIcons\24172759-3403-4b90-b09b-2f2bb16fa1de.ico'))
+        self.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'icon.ico')))
         self.setContextMenu(Menu())
 
 
