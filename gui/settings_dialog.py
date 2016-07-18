@@ -69,7 +69,7 @@ class ServerSettings(QGroupBox):
     def activated(self):
         self.server_name.setText(settings.server_settings.server_name)
         self.server_port.setValue(settings.server_settings.server_port)
-        self.server_password.setText('x' * settings.server_settings.server_password[1])
+        self.server_password.setText('x' * settings.server_settings.server_password_length)
 
     def closed(self):
         pass

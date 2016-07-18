@@ -57,8 +57,13 @@ class ServerSettings(object):
 
     @property
     def server_password(self):
-        sha1, password_length = self.value("server_password", [None, 0])
-        return sha1, int(password_length)
+        sha1, _ = self.value("server_password", [None, 0])
+        return sha1
+
+    @property
+    def server_password_length(self):
+        _, password_length = self.value("server_password", [None, 0])
+        return int(password_length)
 
     @server_password.setter
     def server_password(self, value):

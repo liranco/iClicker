@@ -21,13 +21,8 @@ class UDPBroadcastsHandler(DatagramRequestHandler):
 class MainServerHandler(StreamRequestHandler):
     def __init__(self, request, client_address, server):
         StreamRequestHandler.__init__(self, request, client_address, server)
-        self._challenge = None
-        self._expected_response = None
 
     def setup(self):
-        self._challenge = os.urandom(16).encode('hex')
-        password_hash = hashlib.sha1(Settings().server_settings.server_password[0]).hexdigest()
-        self._expected_response = hmac.new(self._challenge, password_hash, hashlib.sha1).hexdigest()
         StreamRequestHandler.setup(self)
 
     def _post(self, code, **kwargs):
@@ -43,11 +38,11 @@ class MainServerHandler(StreamRequestHandler):
             return None, None
 
     def handle(self):
-        assert None not in (self._challenge, self._expected_response)
         while True:
             code, data = self._get()
             if code is None:
                 return
+            print 'Hello from %s' % data['name']
             if self.challenge_sequence():
                 self._post(CODE_CHALLENGE_SUCCESS)
             else:
@@ -63,11 +58,15 @@ class MainServerHandler(StreamRequestHandler):
 
     def challenge_sequence(self):
         # Start authentication
-        self._post(CODE_CHALLENGE_START, challenge=self._challenge)
+        challenge = os.urandom(16).encode('hex')
+        password_hash = hashlib.sha1(Settings().server_settings.server_password).hexdigest()
+        expected_response = hmac.new(challenge, password_hash, hashlib.sha1).hexdigest()
+
+        self._post(CODE_CHALLENGE_START, challenge=challenge)
         code, result = self._get()
         assert code == CODE_CHALLENGE_RESPONSE
         response = result['response']
-        if response != self._expected_response:
+        if response != expected_response:
             return False
         else:
             return True
