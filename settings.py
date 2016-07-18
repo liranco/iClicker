@@ -18,6 +18,7 @@ class Settings(QSettings):
         if Settings._singleton_object is self:
             return
         super(Settings, self).__init__(os.path.join(os.path.dirname(__file__), SETTINGS_FILE), QSettings.IniFormat)
+        self.setIniCodec('UTF-8')
         self.setFallbacksEnabled(False)
 
         self.server_settings = ServerSettings(self)
@@ -30,6 +31,14 @@ class Settings(QSettings):
     @mode.setter
     def mode(self, value):
         self.setValue("run_mode", value)
+
+    def setValue(self, *args, **kwargs):
+        QSettings.setValue(self, *args, **kwargs)
+        self.sync()
+
+    def value(self, *args, **kwargs):
+        self.sync()
+        return QSettings.value(self, *args, **kwargs)
 
 
 class ServerSettings(object):

@@ -7,7 +7,7 @@ settings = Settings()
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle('Mazgan Settings')
         layout = QVBoxLayout()

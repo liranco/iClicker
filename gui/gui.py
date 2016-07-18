@@ -22,7 +22,7 @@ class Menu(QMenu):
         answer_search_requests()
 
     def open_settings(self):
-        SettingsDialog().exec_()
+        SettingsDialog(parent=self).exec_()
 
 
 class Tray(QSystemTrayIcon):
