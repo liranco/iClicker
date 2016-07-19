@@ -40,11 +40,15 @@ def find_servers():
 
 
 class Client(object):
-    def __init__(self, server_address='192.168.1.19', port=9191, client_name=None):
+    def __init__(self, server_address='192.168.1.19', port=12345, server_password=None, client_name=None):
         self.server_address = server_address
         self.port = port
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.client_name = client_name or Settings().client_settings.client_name
+        if server_password:
+            self.server_password = hashlib.sha1(server_password).hexdigest()
+        else:
+            self.server_password = Settings().server_settings.server_password
 
     def connect(self):
         self.socket.connect((self.server_address, self.port))
@@ -68,7 +72,7 @@ class Client(object):
         code, data = self.receive()
         assert code == CODE_CHALLENGE_START
         challenge = data['challenge']
-        password = hashlib.sha1(Settings().server_settings.server_password).hexdigest()
+        password = hashlib.sha1(self.server_password).hexdigest()
         response = hmac.new(str(challenge), str(password), hashlib.sha1).hexdigest()
         self.socket.send(json.dumps(dict(code=CODE_CHALLENGE_RESPONSE, response=response)))
         assert self.receive()[0] == CODE_CHALLENGE_SUCCESS
