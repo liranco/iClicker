@@ -11,6 +11,7 @@ class SettingsDialog(QDialog):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle('Mazgan Settings')
         layout = QVBoxLayout()
+        self.current_mode = None
         self.mode = QComboBox(self)
         self.mode.addItems((CLIENT_MODE, SERVER_MODE))
 
@@ -27,26 +28,62 @@ class SettingsDialog(QDialog):
         layout.addWidget(mode_container)
         layout.addWidget(self.settings_groups)
 
-        self.buttons_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Apply | QDialogButtonBox.Cancel,
+        self.buttons_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply,
                                             parent=self)
+        self.buttons_box.button(QDialogButtonBox.Ok).clicked.connect(self.ok_button_clicked)
+        self.buttons_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
+        self.buttons_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_button_clicked)
+
         self.buttons_box.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         layout.addWidget(self.buttons_box)
 
         self.setLayout(layout)
 
-        self.mode.setCurrentIndex(self.mode.findText(settings.mode))
+        required_mode_index = self.mode.findText(settings.mode)
+        if self.mode.currentIndex() != required_mode_index:
+            self.mode.setCurrentIndex(required_mode_index)
+        else:
+            # Because the index hasn't really changed but the mode_changed function still needs to be called.
+            self.mode_changed(required_mode_index)
 
     def mode_changed(self, new_mode_index):
+        if self.current_mode:
+            self.current_mode.closed()
         self.settings_groups.setCurrentIndex(new_mode_index)
         new_mode = self.settings_groups.currentWidget()
         new_mode.activated()
+        self.current_mode = new_mode
+
+    def all_modes(self):
+        """
+        :rtype: list[BaseModeSettings]
+        """
+        return [self.settings_groups.widget(i) for i in xrange(self.settings_groups.count())]
 
     def closeEvent(self, event):
-        for widget in (self.settings_groups.widget(i) for i in xrange(self.settings_groups.count())):
-            widget.closed()
+        [widget.closed() for widget in self.all_modes()]
+
+    def ok_button_clicked(self):
+        self.apply_button_clicked()
+        self.close()
+
+    def apply_button_clicked(self):
+        settings.mode = self.mode.currentText()
+        [widget.save() for widget in self.all_modes()]
 
 
-class ServerSettings(QGroupBox):
+class BaseModeSettings(QGroupBox):
+    def activated(self):
+        pass
+
+    def closed(self):
+        pass
+
+    def save(self):
+        pass
+
+
+class ServerSettings(BaseModeSettings):
     def __init__(self, parent=None):
         super(ServerSettings, self).__init__(title="Server Settings", parent=parent)
         layout = QFormLayout()
@@ -55,7 +92,7 @@ class ServerSettings(QGroupBox):
         self.server_port.setMaximum(65535)
         self.server_password = QLineEdit(parent=self)
         self.server_password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
-        self.server_password.changed = False
+        self.server_password.is_changed = False
         self.server_password.textChanged.connect(self.password_changed)
         layout.addRow("Server Name:", self.server_name)
         layout.addRow("Server Port:", self.server_port)
@@ -64,26 +101,30 @@ class ServerSettings(QGroupBox):
         self.setLayout(layout)
 
     def password_changed(self):
-        self.server_password.changed = True
+        self.server_password.is_changed = True
 
     def activated(self):
         self.server_name.setText(settings.server_settings.server_name)
         self.server_port.setValue(settings.server_settings.server_port)
         self.server_password.setText('x' * settings.server_settings.server_password_length)
+        self.server_password.is_changed = False
 
-    def closed(self):
-        pass
+    def save(self):
+        settings.server_settings.server_name = self.server_name.text()
+        settings.server_settings.server_port = self.server_port.value()
+        if self.server_password.is_changed:
+            settings.server_settings.server_password = self.server_password.text()
 
 
-class ClientSettings(QGroupBox):
+class ClientSettings(BaseModeSettings):
     LOAD_SERVERS_TEXT = "Load Servers"
     STOP_LOADING_SERVERS_TEXT = "Click to Stop."
 
-    CURRENT_SERVER_NOT_SET = ("Not Set", Qt.red)
-    CURRENT_SERVER_CONNECTING = ('Connecting to "{}"...', Qt.darkYellow)
-    CURRENT_SERVER_OFFLINE = ('"{}" is Offline', Qt.red)
-    CURRENT_SERVER_CONNECTED = ('Connected to "{}"!', Qt.green)
-    CURRENT_SERVER_ERROR = ('Error on "{}"!', Qt.red)
+    # CURRENT_SERVER_NOT_SET = ("Not Set", Qt.red)
+    # CURRENT_SERVER_CONNECTING = ('Connecting to "{}"...', Qt.darkYellow)
+    # CURRENT_SERVER_OFFLINE = ('"{}" is Offline', Qt.red)
+    # CURRENT_SERVER_CONNECTED = ('Connected to "{}"!', Qt.green)
+    # CURRENT_SERVER_ERROR = ('Error on "{}"!', Qt.red)
 
     def __init__(self, parent=None):
         super(ClientSettings, self).__init__(title="Client Settings", parent=parent)
@@ -97,11 +138,9 @@ class ClientSettings(QGroupBox):
         self.current_server_ip.setPlaceholderText("IP Address")
         self.current_server_port = QSpinBox(parent=current_server_row)
         self.current_server_port.setMaximum(65535)
-        self.current_server_message = QLabel(parent=current_server_row)
-        self._set_current_server_message(*self.CURRENT_SERVER_NOT_SET)
+        self.current_server_name = None
         current_server_row.layout().addWidget(self.current_server_ip)
         current_server_row.layout().addWidget(self.current_server_port)
-        current_server_row.layout().addWidget(self.current_server_message)
         # current_server_row.setVisible(False)
         layout.addRow("Current Server:", current_server_row)
         # Setup servers search
@@ -118,12 +157,6 @@ class ClientSettings(QGroupBox):
         layout.addRow(self.reload_servers_button)
         self.setLayout(layout)
         self.servers_finder_thread = None
-
-    def _set_current_server_message(self, message, color):
-        palette = QPalette()
-        palette.setColor(QPalette.WindowText, color)
-        self.current_server_message.setPalette(palette)
-        self.current_server_message.setText(message)
 
     def reload_servers(self):
         # First, empty the list
@@ -163,9 +196,16 @@ class ClientSettings(QGroupBox):
         server_name, ip_address, port = item.data(Qt.UserRole)
         self.current_server_ip.setText(ip_address)
         self.current_server_port.setValue(port)
+        self.current_server_name = server_name
 
     def activated(self):
         self.client_name.setText(settings.client_settings.client_name)
+        current_server = settings.client_settings.connected_server
+        if current_server:
+            name, ip, port = current_server
+            self.current_server_name = name
+            self.current_server_ip.setText(ip)
+            self.current_server_port.setValue(port)
         if self.servers.count() == 0:
             self.reload_servers()
 
@@ -173,6 +213,17 @@ class ClientSettings(QGroupBox):
         if self.servers_finder_thread:
             self.servers_finder_thread.stop_me()
             self.servers_finder_thread.wait()
+            self.servers.clear()
+
+    def save(self):
+        settings.client_settings.client_name = self.client_name.text()
+        if self.current_server_ip.text() == '' or self.current_server_port.value() == 0:
+            settings.client_settings.connected_server = None
+        else:
+            settings.client_settings.connected_server = (self.current_server_name,
+                                                         self.current_server_ip.text(),
+                                                         self.current_server_port.value())
+
 
 
 class ServersFinderThread(QThread):
@@ -194,7 +245,6 @@ class ServersFinderThread(QThread):
             if interface != prev_interface:
                 self.text_changed.emit(self.TEXT_TEMPLATE % interface)
                 prev_interface = interface
-                print interface
             if result:
                 self.server_found.emit(result)
 
