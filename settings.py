@@ -26,7 +26,7 @@ class Settings(QSettings):
 
     @property
     def mode(self):
-        return self.value("run_mode", CLIENT_MODE)
+        return self.value("run_mode", CLIENT_MODE).capitalize()
 
     @mode.setter
     def mode(self, value):
@@ -41,11 +41,23 @@ class Settings(QSettings):
         return QSettings.value(self, *args, **kwargs)
 
 
-class ServerSettings(object):
+class BaseSettingsGroup(object):
     def __init__(self, settings):
         self._settings = settings         # type: Settings
-        self.value = settings.value
-        self.setValue = settings.setValue
+
+    def value(self, value_name, default=None):
+        self._settings.beginGroup(type(self).__name__)
+        value = self._settings.value(value_name, default)
+        self._settings.endGroup()
+        return value
+
+    def set_value(self, value_name, value):
+        self._settings.beginGroup(type(self).__name__)
+        self._settings.setValue(value_name, value)
+        self._settings.endGroup()
+
+
+class ServerSettings(BaseSettingsGroup):
 
     @property
     def server_name(self):
@@ -53,7 +65,7 @@ class ServerSettings(object):
 
     @server_name.setter
     def server_name(self, value):
-        self.setValue("server_name", value)
+        self.set_value("server_name", value)
 
     @property
     def server_password(self):
@@ -68,23 +80,18 @@ class ServerSettings(object):
     @server_password.setter
     def server_password(self, value):
         from hashlib import sha1
-        self.setValue("server_password", (sha1(value).hexdigest(), len(value)))
+        self.set_value("server_password", (sha1(value).hexdigest(), len(value)))
 
     @property
     def server_port(self):
-        return self.value("server_port", DEFAULT_SERVER_PORT)
+        return int(self.value("server_port", DEFAULT_SERVER_PORT))
 
     @server_port.setter
     def server_port(self, value):
-        self.setValue("server_port", value)
+        self.set_value("server_port", value)
 
 
-class ClientSettings(object):
-    def __init__(self, settings):
-        self._settings = settings         # type: Settings
-        self.value = settings.value
-        self.setValue = settings.setValue
-
+class ClientSettings(BaseSettingsGroup):
     @property
     def client_name(self):
         import platform
@@ -92,13 +99,20 @@ class ClientSettings(object):
 
     @client_name.setter
     def client_name(self, value):
-        self.setValue("client_name", value)
+        self.set_value("client_name", value)
 
     @property
     def connected_server(self):
-        return self.value('connected_server', None)
+        connected_server = self.value('connected_server', None)
+        if connected_server:
+            server_name, server_ip, port = connected_server
+            return server_name, server_ip, int(port)
+        return None
 
     @connected_server.setter
     def connected_server(self, value):
-        server_name, server_ip, port = value
-        self.setValue(server_name, server_ip, port)
+        if value:
+            server_name, server_ip, port = value
+            self.set_value("connected_server", (server_name, server_ip, port))
+        else:
+            self.set_value("connected_server", None)
