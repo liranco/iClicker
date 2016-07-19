@@ -1,6 +1,6 @@
 import os
 import sys
-from PySide.QtGui import QSystemTrayIcon, QMenu, QApplication, QIcon, QMessageBox
+from PySide.QtGui import QSystemTrayIcon, QMenu, QApplication, QIcon
 from settings import Settings
 from settings_dialog import SettingsDialog
 from consts import *
@@ -28,13 +28,13 @@ class Menu(QMenu):
 class Tray(QSystemTrayIcon):
     def __init__(self):
         super(Tray, self).__init__()
-        self.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'icon.ico')))
+        self.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'icon2.png')))
         self.setContextMenu(Menu())
 
 
 def main():
     app = QApplication(sys.argv)
-    app.setStyle('Cleanlooks')
+    # app.setStyle('Cleanlooks')
     app.setQuitOnLastWindowClosed(False)
     tray = Tray()
     tray.show()
