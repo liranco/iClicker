@@ -18,7 +18,7 @@ def find_servers():
         s.bind((interface, 0))
         s.sendto(json.dumps(dict(code=CODE_FIND_SERVER)), ('255.255.255.255', SERVER_BROADCAST_PORT))
         s.settimeout(0.5)
-        start_time = time()
+        start_time = time.time()
 
         def receive():
             try:
@@ -28,7 +28,7 @@ def find_servers():
             return d
         found_servers = set()
         data = receive()
-        while data or ((time() - start_time) < FIND_SERVER_TIMEOUT):
+        while data or ((time.time() - start_time) < FIND_SERVER_TIMEOUT):
             if data:
                 data, (ip_address, _) = json.loads(data[0]), data[1]
                 server_info = (data['server_name'], ip_address, data['port'])
