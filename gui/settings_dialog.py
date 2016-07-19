@@ -181,7 +181,7 @@ class ClientSettings(BaseModeSettings):
 
     def server_search_found_item(self, server_info):
         server_name, ip_address, port = server_info
-        item = QListWidgetItem("{} ({}:{})".format(server_name, ip_address, port), view=self.servers)
+        item = QListWidgetItem(u"{} ({}:{})".format(server_name, ip_address, port), view=self.servers)
         item.setData(Qt.UserRole, (server_name, ip_address, port))
 
     def server_search_finished(self):
