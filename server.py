@@ -42,7 +42,6 @@ class MainServerHandler(StreamRequestHandler):
             code, data = self._get()
             if code is None:
                 return
-            print 'Hello from %s' % data['name']
             if self.challenge_sequence():
                 self._post(CODE_CHALLENGE_SUCCESS)
             else:
@@ -73,8 +72,8 @@ class MainServerHandler(StreamRequestHandler):
 
 
 class MainServer(ThreadingTCPServer):
-    def __init__(self, server_address, request_handler_class):
-        ThreadingTCPServer.__init__(self, server_address, request_handler_class)
+    def __init__(self, server_address):
+        ThreadingTCPServer.__init__(self, server_address, MainServerHandler)
         self.clients = {}
         self.timeout = 5
 
@@ -88,21 +87,21 @@ def answer_search_requests(threaded=True):
         server_thread = Thread(target=server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
-        return server_thread
+        return server_thread, server
     else:
         server.serve_forever()
 
 
 def run_server(threaded=True):
     try:
-        server = MainServer(('0.0.0.0', Settings().server_settings.server_port), MainServerHandler)
+        server = MainServer(('0.0.0.0', Settings().server_settings.server_port))
     except socket.error:
         return
     if threaded:
         server_thread = Thread(target=server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
-        return server_thread
+        return server_thread, server
     else:
         server.serve_forever()
 
