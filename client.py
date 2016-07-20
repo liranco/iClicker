@@ -52,16 +52,16 @@ class BadPasswordException(Exception):
 
 
 class Client(object):
-    def __init__(self, server_address=None, port=None, server_password=None, client_name=None):
+    def __init__(self, server_address=None, port=None, password=None, client_name=None, is_password_hashed=False):
         client_settings = Settings().client_settings
         self.server_address = server_address or client_settings.connected_server[1]
         self.port = port or client_settings.connected_server[2]
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.client_name = client_name or client_settings.client_name
-        if server_password:
-            self.server_password = hashlib.sha1(server_password).hexdigest()
+        if password:
+            self.password = password if is_password_hashed else hashlib.sha1(password).hexdigest()
         else:
-            self.server_password = client_settings.server_password
+            self.password = client_settings.server_password
 
     def connect(self):
         self.socket.connect((self.server_address, self.port))
@@ -83,10 +83,13 @@ class Client(object):
 
     def _challenge(self):
         code, data = self.receive()
-        assert code == CODE_CHALLENGE_START
-        challenge = data['challenge']
-        password = hashlib.sha1(self.server_password or '').hexdigest()
-        response = hmac.new(str(challenge), str(password), hashlib.sha1).hexdigest()
+        if code is CODE_CHALLENGE_NOT_REQUIRED:
+            response = None
+        else:
+            assert code is CODE_CHALLENGE_START
+            challenge = data['challenge']
+            password = hashlib.sha1(self.password or '').hexdigest()
+            response = hmac.new(str(challenge), str(password), hashlib.sha1).hexdigest()
         self.socket.send(json.dumps(dict(code=CODE_CHALLENGE_RESPONSE, response=response)))
         if self.receive()[0] != CODE_CHALLENGE_SUCCESS:
             raise BadPasswordException(data['name'], self.server_address, self.port)

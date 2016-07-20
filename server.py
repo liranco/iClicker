@@ -49,7 +49,7 @@ class MainServerHandler(StreamRequestHandler):
                 self._post(CODE_CHALLENGE_FAILED)
                 continue
             if code == CODE_SAY_HELLO:
-                print 'HELLOOOOO'
+                print 'HELLOOOOO from ', data['name']
                 continue
             if code == CODE_ACCEPT_NOTIFICATIONS:
                 self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
@@ -58,11 +58,16 @@ class MainServerHandler(StreamRequestHandler):
 
     def challenge_sequence(self):
         # Start authentication
-        challenge = os.urandom(16).encode('hex')
-        password_hash = hashlib.sha1(Settings().server_settings.server_password).hexdigest()
-        expected_response = hmac.new(challenge, password_hash, hashlib.sha1).hexdigest()
-
-        self._post(CODE_CHALLENGE_START, challenge=challenge)
+        password = Settings().server_settings.server_password
+        if not password:
+            # No challenge required.
+            expected_response = None
+            self._post(CODE_CHALLENGE_NOT_REQUIRED)
+        else:
+            challenge = os.urandom(16).encode('hex')
+            password_hash = hashlib.sha1(password).hexdigest()
+            expected_response = hmac.new(challenge, password_hash, hashlib.sha1).hexdigest()
+            self._post(CODE_CHALLENGE_START, challenge=challenge)
         code, result = self._get()
         assert code == CODE_CHALLENGE_RESPONSE
         response = result['response']
