@@ -45,6 +45,21 @@ class BaseSettingsGroup(object):
     def __init__(self, settings):
         self._settings = settings         # type: Settings
 
+    @property
+    def server_password(self):
+        sha1, _ = self.value("server_password", [None, 0])
+        return sha1
+
+    @property
+    def server_password_length(self):
+        _, password_length = self.value("server_password", [None, 0])
+        return int(password_length)
+
+    @server_password.setter
+    def server_password(self, value):
+        from hashlib import sha1
+        self.set_value("server_password", (sha1(value).hexdigest(), len(value)))
+
     def value(self, value_name, default=None):
         self._settings.beginGroup(type(self).__name__)
         value = self._settings.value(value_name, default)
@@ -66,21 +81,6 @@ class ServerSettings(BaseSettingsGroup):
     @server_name.setter
     def server_name(self, value):
         self.set_value("server_name", value)
-
-    @property
-    def server_password(self):
-        sha1, _ = self.value("server_password", [None, 0])
-        return sha1
-
-    @property
-    def server_password_length(self):
-        _, password_length = self.value("server_password", [None, 0])
-        return int(password_length)
-
-    @server_password.setter
-    def server_password(self, value):
-        from hashlib import sha1
-        self.set_value("server_password", (sha1(value).hexdigest(), len(value)))
 
     @property
     def server_port(self):
