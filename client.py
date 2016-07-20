@@ -39,16 +39,29 @@ def find_servers():
             data = receive()
 
 
+class BadPasswordException(Exception):
+    def __init__(self, server_name, server_ip, server_port):
+        self.server_name, self.server_ip, self.server_port = (server_name, server_ip, server_port)
+
+    def __str__(self):
+        try:
+            server_name = '"{}" '.format(str(self.server_name))
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            server_name = ''
+        return "Bad Password for {}{}:{}".format(server_name, self.server_ip, self.server_port)
+
+
 class Client(object):
-    def __init__(self, server_address='192.168.1.19', port=12345, server_password=None, client_name=None):
-        self.server_address = server_address
-        self.port = port
+    def __init__(self, server_address=None, port=None, server_password=None, client_name=None):
+        client_settings = Settings().client_settings
+        self.server_address = server_address or client_settings.connected_server[1]
+        self.port = port or client_settings.connected_server[2]
         self.socket = socket(AF_INET, SOCK_STREAM)
-        self.client_name = client_name or Settings().client_settings.client_name
+        self.client_name = client_name or client_settings.client_name
         if server_password:
             self.server_password = hashlib.sha1(server_password).hexdigest()
         else:
-            self.server_password = Settings().server_settings.server_password
+            self.server_password = client_settings.server_password
 
     def connect(self):
         self.socket.connect((self.server_address, self.port))
@@ -72,10 +85,11 @@ class Client(object):
         code, data = self.receive()
         assert code == CODE_CHALLENGE_START
         challenge = data['challenge']
-        password = hashlib.sha1(self.server_password).hexdigest()
+        password = hashlib.sha1(self.server_password or '').hexdigest()
         response = hmac.new(str(challenge), str(password), hashlib.sha1).hexdigest()
         self.socket.send(json.dumps(dict(code=CODE_CHALLENGE_RESPONSE, response=response)))
-        assert self.receive()[0] == CODE_CHALLENGE_SUCCESS
+        if self.receive()[0] != CODE_CHALLENGE_SUCCESS:
+            raise BadPasswordException(data['name'], self.server_address, self.port)
         return response
 
     def dance(self):
