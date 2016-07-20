@@ -27,6 +27,7 @@ class MainServerHandler(StreamRequestHandler):
 
     def _post(self, code, **kwargs):
         kwargs['code'] = code
+        kwargs['name'] = self.server.server_name
         self.wfile.write(json.dumps(kwargs))
 
     def _get(self):
@@ -72,9 +73,10 @@ class MainServerHandler(StreamRequestHandler):
 
 
 class MainServer(ThreadingTCPServer):
-    def __init__(self, server_address):
+    def __init__(self, server_name, server_address):
         ThreadingTCPServer.__init__(self, server_address, MainServerHandler)
         self.clients = {}
+        self.server_name = server_name
         self.timeout = 5
 
 
@@ -94,7 +96,7 @@ def answer_search_requests(threaded=True):
 
 def run_server(threaded=True):
     try:
-        server = MainServer(('0.0.0.0', Settings().server_settings.server_port))
+        server = MainServer(Settings().server_settings.server_name, ('0.0.0.0', Settings().server_settings.server_port))
     except socket.error:
         return
     if threaded:
@@ -107,4 +109,5 @@ def run_server(threaded=True):
 
 
 if __name__ == '__main__':
+    answer_search_requests(True)
     run_server(False)
