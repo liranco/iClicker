@@ -22,7 +22,7 @@ def get_status_formatted(status, *args):
 class Menu(QMenu):
     def __init__(self, parent):
         super(Menu, self).__init__("Mazgan Clicker", parent=parent)
-        self.status_label = QLabel('Hi There!')
+        self.status_label = QLabel(' ' * 20)
         status_label_action = QWidgetAction(self)
         status_label_action.setDefaultWidget(self.status_label)
         self.addAction(status_label_action)
@@ -31,12 +31,9 @@ class Menu(QMenu):
         dance_action.triggered.connect(lambda: parent.client.dance())
         self.addSeparator()
         settings_action = self.addAction('Settings')
-        settings_action.triggered.connect(self.open_settings)
+        settings_action.triggered.connect(parent.show_settings)
         exit_action = self.addAction('Exit')
         exit_action.triggered.connect(parent.close)
-
-    def open_settings(self):
-        SettingsDialog(parent=self).exec_()
 
     def set_status_label(self, status, *args):
         text, color = status
@@ -53,6 +50,7 @@ class MainWindow(QMainWindow):
         self.tray_menu = Menu(self)  # type: Menu
         self.settings = Settings()
         self.active_server_threads = []
+        self.settings_dialog = None
         self.client = None
         if self.settings.mode == SERVER_MODE:
             self.start_server()
@@ -62,11 +60,33 @@ class MainWindow(QMainWindow):
         self.tray.setContextMenu(self.tray_menu)
         self.tray.show()
 
+    def show_settings(self):
+        if self.settings_dialog:
+            self.settings_dialog.activateWindow()
+        else:
+            self.settings_dialog = SettingsDialog(self)
+            new_mode = self.settings_dialog.exec_()
+            self.settings_dialog.deleteLater()
+            self.settings_dialog = None
+            print new_mode
+            if new_mode == SERVER_MODE:
+                self.start_server()
+            elif new_mode == CLIENT_MODE:
+                self.connect_to_server()
+
     def start_server(self):
+        print 'Running as server'
+        from client import Client
+        self.disconnect_client()
         from server import answer_search_requests, run_server
         self.active_server_threads.extend((answer_search_requests(threaded=True),
                                            run_server(threaded=True)))
         self.tray_menu.status_label.setText('Hello')
+        self.client = Client('127.0.0.1', self.settings.server_settings.server_port,
+                             self.settings.server_settings.server_password,
+                             client_name='Localhost',
+                             is_password_hashed=True)
+        self.client.connect()
 
     def stop_server(self):
         for thread, server in self.active_server_threads:
@@ -80,6 +100,8 @@ class MainWindow(QMainWindow):
             self.client = None
 
     def connect_to_server(self):
+        print 'Running as client'
+        self.stop_server()
         import errno
         from client import Client, BadPasswordException, error
         if self.settings.client_settings.connected_server is None:

@@ -30,6 +30,7 @@ class SettingsDialog(QDialog):
 
         self.buttons_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply,
                                             parent=self)
+        self._is_apply_clicked = False
         self.buttons_box.button(QDialogButtonBox.Ok).clicked.connect(self.ok_button_clicked)
         self.buttons_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
         self.buttons_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_button_clicked)
@@ -70,6 +71,12 @@ class SettingsDialog(QDialog):
     def apply_button_clicked(self):
         settings.mode = self.mode.currentText()
         [widget.save() for widget in self.all_modes()]
+        self._is_apply_clicked = True
+
+    def exec_(self):
+        super(SettingsDialog, self).exec_()
+        if self._is_apply_clicked:
+            return self.mode.currentText()
 
 
 class BaseModeSettings(QGroupBox):
