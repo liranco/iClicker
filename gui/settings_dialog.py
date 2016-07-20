@@ -73,6 +73,16 @@ class SettingsDialog(QDialog):
 
 
 class BaseModeSettings(QGroupBox):
+    def make_password_field(self):
+        server_password = QLineEdit(parent=self)
+        server_password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        server_password.is_changed = False
+        server_password.textChanged.connect(self.password_changed)
+        return server_password
+
+    def password_changed(self):
+        self.server_password.is_changed = True
+
     def activated(self):
         pass
 
@@ -90,20 +100,13 @@ class ServerSettings(BaseModeSettings):
         self.server_name = QLineEdit(parent=self)
         self.server_port = QSpinBox(parent=self)
         self.server_port.setMaximum(65535)
-        self.server_password = QLineEdit(parent=self)
-        self.server_password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
-        self.server_password.is_changed = False
-        self.server_password.textChanged.connect(self.password_changed)
+        self.server_password = self.make_password_field()
         layout.addRow("Server Name:", self.server_name)
         layout.addRow("Server Port:", self.server_port)
         layout.addRow("Password:", self.server_password)
         layout.addRow(QPushButton('Calibrate Clicker', parent=self))
         self.setLayout(layout)
 
-    def password_changed(self):
-        self.server_password.is_changed = True
-
-    def activated(self):
         self.server_name.setText(settings.server_settings.server_name)
         self.server_port.setValue(settings.server_settings.server_port)
         self.server_password.setText('x' * settings.server_settings.server_password_length)
@@ -120,12 +123,6 @@ class ClientSettings(BaseModeSettings):
     LOAD_SERVERS_TEXT = "Load Servers"
     STOP_LOADING_SERVERS_TEXT = "Click to Stop."
 
-    # CURRENT_SERVER_NOT_SET = ("Not Set", Qt.red)
-    # CURRENT_SERVER_CONNECTING = ('Connecting to "{}"...', Qt.darkYellow)
-    # CURRENT_SERVER_OFFLINE = ('"{}" is Offline', Qt.red)
-    # CURRENT_SERVER_CONNECTED = ('Connected to "{}"!', Qt.green)
-    # CURRENT_SERVER_ERROR = ('Error on "{}"!', Qt.red)
-
     def __init__(self, parent=None):
         super(ClientSettings, self).__init__(title="Client Settings", parent=parent)
         layout = QFormLayout()
@@ -139,10 +136,11 @@ class ClientSettings(BaseModeSettings):
         self.current_server_port = QSpinBox(parent=current_server_row)
         self.current_server_port.setMaximum(65535)
         self.current_server_name = None
+        self.server_password = self.make_password_field()
         current_server_row.layout().addWidget(self.current_server_ip)
         current_server_row.layout().addWidget(self.current_server_port)
-        # current_server_row.setVisible(False)
         layout.addRow("Current Server:", current_server_row)
+        layout.addRow("Server Password:", self.server_password)
         # Setup servers search
         self.servers = QListWidget(self)
         self.servers.currentItemChanged.connect(self.server_picked_from_list)
@@ -157,6 +155,16 @@ class ClientSettings(BaseModeSettings):
         layout.addRow(self.reload_servers_button)
         self.setLayout(layout)
         self.servers_finder_thread = None
+
+        self.client_name.setText(settings.client_settings.client_name)
+        current_server = settings.client_settings.connected_server
+        if current_server:
+            name, ip, port = current_server
+            self.current_server_name = name
+            self.current_server_ip.setText(ip)
+            self.current_server_port.setValue(port)
+        self.server_password.setText('x' * settings.client_settings.server_password_length)
+        self.server_password.is_changed = False
 
     def reload_servers(self):
         # First, empty the list
@@ -199,13 +207,6 @@ class ClientSettings(BaseModeSettings):
         self.current_server_name = server_name
 
     def activated(self):
-        self.client_name.setText(settings.client_settings.client_name)
-        current_server = settings.client_settings.connected_server
-        if current_server:
-            name, ip, port = current_server
-            self.current_server_name = name
-            self.current_server_ip.setText(ip)
-            self.current_server_port.setValue(port)
         if self.servers.count() == 0:
             self.reload_servers()
 
@@ -223,7 +224,8 @@ class ClientSettings(BaseModeSettings):
             settings.client_settings.connected_server = (self.current_server_name,
                                                          self.current_server_ip.text(),
                                                          self.current_server_port.value())
-
+        if self.server_password.is_changed:
+            settings.client_settings.server_password = self.server_password.text()
 
 
 class ServersFinderThread(QThread):
