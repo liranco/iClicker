@@ -11,7 +11,7 @@ STATUS_CLIENT_NOT_SET = (u"Server Not Configured", Qt.red)
 STATUS_CLIENT_CONNECTING = (u'Connecting to "{}"...', Qt.darkYellow)
 STATUS_CLIENT_OFFLINE = (u'"{}" is Offline', Qt.red)
 STATUS_CLIENT_CONNECTED = (u'Connected to "{}"!', Qt.darkGreen)
-STATUS_CLIENT_ERROR = (u'Error on "{}"!', Qt.red)
+STATUS_CLIENT_ERROR = (u'Error #{} on "{}"!', Qt.red)
 STATUS_CLIENT_BAD_PASSWORD = (u'"{}"\'s password is wrong!', Qt.red)
 
 
@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         self.active_server_threads = []
         self.settings_dialog = None
         self.client = None
+        self._client_connection_check_timer = None
         if self.settings.mode == SERVER_MODE:
             self.start_server()
         else:
@@ -89,7 +90,8 @@ class MainWindow(QMainWindow):
         self.client.connect()
 
     def stop_server(self):
-        for thread, server in self.active_server_threads:
+        while len(self.active_server_threads) > 0:
+            thread, server = self.active_server_threads.pop()
             server.shutdown()
             server.server_close()
             thread.join()
@@ -100,28 +102,31 @@ class MainWindow(QMainWindow):
             self.client = None
 
     def connect_to_server(self):
-        print 'Running as client'
         self.stop_server()
         import errno
         from client import Client, BadPasswordException, error
         if self.settings.client_settings.connected_server is None:
             self.tray_menu.set_status_label(STATUS_CLIENT_NOT_SET)
             return
-        client = Client()
+        client = Client() if not self.client else self.client
         self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTING, client.server_address)
         try:
             client.connect()
         except BadPasswordException:
             self.tray_menu.set_status_label(STATUS_CLIENT_BAD_PASSWORD, client.server_address)
-            return
         except error as e:
-            if e.errno == errno.ECONNREFUSED:
+            if e.errno in (errno.ECONNREFUSED, errno.ETIMEDOUT, errno.ECONNRESET):
                 self.tray_menu.set_status_label(STATUS_CLIENT_OFFLINE, client.server_address)
             else:
-                self.tray_menu.set_status_label(STATUS_CLIENT_ERROR, client.server_address)
-            return
-        self.client = client
-        self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTED, client.server_address)
+                print e
+                self.tray_menu.set_status_label(STATUS_CLIENT_ERROR, e.errno, client.server_address)
+            client.close()
+            self.client = None
+        else:
+            self.client = client
+            self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTED, client.server_address)
+        if not self._client_connection_check_timer:
+            self._client_connection_check_timer = self.startTimer(5000)
 
     def closeEvent(self, event):
         self.stop_server()
@@ -129,6 +134,10 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).closeEvent(event)
         # noinspection PyArgumentList
         QApplication.instance().exit()
+
+    def timerEvent(self, event):
+        if event.timerId() == self._client_connection_check_timer:
+            self.connect_to_server()
 
 
 def main():

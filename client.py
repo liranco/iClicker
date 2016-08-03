@@ -5,6 +5,7 @@ from settings import Settings
 from consts import *
 from time import time
 from socket import *
+import errno
 import time
 
 
@@ -64,7 +65,12 @@ class Client(object):
             self.password = client_settings.server_password
 
     def connect(self):
-        self.socket.connect((self.server_address, self.port))
+        try:
+            self.socket.connect((self.server_address, self.port))
+        except error as e:
+            if e.errno != errno.EISCONN:
+                # Not failed because the socket is already connected.
+                raise
         self.send(CODE_START_COMM)
 
     def send(self, code, **kwargs):

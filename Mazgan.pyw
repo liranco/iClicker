@@ -8,7 +8,8 @@ def main():
 
     options, args = parser.parse_args()
     if options.server_mode:
-        from server import answer_search_requests
+        from server import answer_search_requests, run_server
+        run_server()
         answer_search_requests(threaded=False)
     elif options.client_mode:
         from client import find_servers
