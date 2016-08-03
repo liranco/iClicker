@@ -56,6 +56,7 @@ class Client(object):
     def __init__(self, server_address=None, port=None, password=None, client_name=None, is_password_hashed=False):
         client_settings = Settings().client_settings
         self.server_address = server_address or client_settings.connected_server[1]
+        self.server_name = self.server_address
         self.port = port or client_settings.connected_server[2]
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.client_name = client_name or client_settings.client_name
@@ -83,6 +84,8 @@ class Client(object):
         data = self.socket.recv(1024)
         if data:
             data = json.loads(data)
+            if 'name' in data:
+                self.server_name = data['name']
             return data['code'], data
         else:
             return None, None

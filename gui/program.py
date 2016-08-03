@@ -8,11 +8,11 @@ from consts import *
 
 
 STATUS_CLIENT_NOT_SET = (u"Server Not Configured", Qt.red)
-STATUS_CLIENT_CONNECTING = (u'Connecting to "{}"...', Qt.darkYellow)
-STATUS_CLIENT_OFFLINE = (u'"{}" is Offline', Qt.red)
-STATUS_CLIENT_CONNECTED = (u'Connected to "{}"!', Qt.darkGreen)
-STATUS_CLIENT_ERROR = (u'Error #{} on "{}"!', Qt.red)
-STATUS_CLIENT_BAD_PASSWORD = (u'"{}"\'s password is wrong!', Qt.red)
+STATUS_CLIENT_CONNECTING = (u'Connecting to {}...', Qt.darkYellow)
+STATUS_CLIENT_OFFLINE = (u'{} is Offline', Qt.red)
+STATUS_CLIENT_CONNECTED = (u'Connected to {}!', Qt.darkGreen)
+STATUS_CLIENT_ERROR = (u'Error #{} on {}!', Qt.red)
+STATUS_CLIENT_BAD_PASSWORD = (u'{}\'s password is wrong!', Qt.red)
 
 
 def get_status_formatted(status, *args):
@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
                              self.settings.server_settings.server_password,
                              client_name='Localhost',
                              is_password_hashed=True)
-        self.client.connect()
+        self.connect_to_server(stop_server=False)
 
     def stop_server(self):
         while len(self.active_server_threads) > 0:
@@ -100,35 +100,41 @@ class MainWindow(QMainWindow):
         if self.client:
             self.client.close()
             self.client = None
+        if self._client_connection_check_timer:
+            self.killTimer(self._client_connection_check_timer)
+            self._client_connection_check_timer = None
 
-    def connect_to_server(self):
-        self.stop_server()
+    def connect_to_server(self, stop_server=True):
+        if stop_server:
+            self.stop_server()
         import errno
         from client import Client, BadPasswordException, error
         if self.settings.client_settings.connected_server is None:
             self.tray_menu.set_status_label(STATUS_CLIENT_NOT_SET)
             return
         client = Client() if not self.client else self.client
-        self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTING, client.server_address)
+        self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTING, client.server_name)
         try:
             client.connect()
         except BadPasswordException:
-            self.tray_menu.set_status_label(STATUS_CLIENT_BAD_PASSWORD, client.server_address)
+            self.tray_menu.set_status_label(STATUS_CLIENT_BAD_PASSWORD, client.server_name)
         except error as e:
             if e.errno in (errno.ECONNREFUSED, errno.ETIMEDOUT, errno.ECONNRESET):
-                self.tray_menu.set_status_label(STATUS_CLIENT_OFFLINE, client.server_address)
+                self.tray_menu.set_status_label(STATUS_CLIENT_OFFLINE, client.server_name)
             else:
-                print e
-                self.tray_menu.set_status_label(STATUS_CLIENT_ERROR, e.errno, client.server_address)
+                self.tray_menu.set_status_label(STATUS_CLIENT_ERROR, e.errno, client.server_name)
+            print e
             client.close()
             self.client = None
         else:
             self.client = client
-            self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTED, client.server_address)
+            self.tray_menu.set_status_label(STATUS_CLIENT_CONNECTED, client.server_name)
         if not self._client_connection_check_timer:
-            self._client_connection_check_timer = self.startTimer(5000)
+            self._client_connection_check_timer = self.startTimer(20000)
 
     def closeEvent(self, event):
+        if self._client_connection_check_timer:
+            self.killTimer(self._client_connection_check_timer)
         self.stop_server()
         self.disconnect_client()
         super(MainWindow, self).closeEvent(event)

@@ -15,7 +15,7 @@ def main():
         from client import find_servers
         print find_servers()
     else:
-        from gui.gui import main
+        from gui.program import main
         main()
 
 if __name__ == '__main__':
