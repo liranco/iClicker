@@ -2,6 +2,7 @@ from consts import *
 from settings import Settings
 from threading import Thread
 from SocketServer import *
+import socket
 import json
 import hmac
 import hashlib
@@ -88,8 +89,9 @@ class MainServer(ThreadingTCPServer):
 def answer_search_requests(threaded=True):
     try:
         server = ThreadingUDPServer(('0.0.0.0', SERVER_BROADCAST_PORT), UDPBroadcastsHandler)
-    except socket.error:
-        return
+    except socket.error as error:
+        print error
+        return None, None
     if threaded:
         server_thread = Thread(target=server.serve_forever)
         server_thread.daemon = True
@@ -102,8 +104,9 @@ def answer_search_requests(threaded=True):
 def run_server(threaded=True):
     try:
         server = MainServer(Settings().server_settings.server_name, ('0.0.0.0', Settings().server_settings.server_port))
-    except socket.error:
-        return
+    except socket.error as error:
+        print error
+        return None, None
     if threaded:
         server_thread = Thread(target=server.serve_forever)
         server_thread.daemon = True
