@@ -70,14 +70,13 @@ class MainWindow(QMainWindow):
             new_mode = self.settings_dialog.exec_()
             self.settings_dialog.deleteLater()
             self.settings_dialog = None
-            print new_mode
             if new_mode == SERVER_MODE:
                 self.start_server()
             elif new_mode == CLIENT_MODE:
+                self.stop_server()
                 self.connect_to_server()
 
     def start_server(self):
-        print 'Running as server'
         from client import Client
         self.disconnect_client()
         from server import answer_search_requests, run_server
@@ -88,7 +87,7 @@ class MainWindow(QMainWindow):
                              self.settings.server_settings.server_password,
                              client_name='Localhost',
                              is_password_hashed=True)
-        self.connect_to_server(stop_server=False)
+        self.connect_to_server()
 
     def stop_server(self):
         while len(self.active_server_threads) > 0:
@@ -96,8 +95,8 @@ class MainWindow(QMainWindow):
             if server:
                 server.shutdown()
                 server.server_close()
-            if thread:
-                thread.join()
+            del server
+            del thread
 
     def disconnect_client(self):
         if self.client:
@@ -107,9 +106,7 @@ class MainWindow(QMainWindow):
             self.killTimer(self._client_connection_check_timer)
             self._client_connection_check_timer = None
 
-    def connect_to_server(self, stop_server=True):
-        if stop_server:
-            self.stop_server()
+    def connect_to_server(self):
         if self._connect_to_server_thread is None:
             thread = ConnectToServerThread(self, client=self.client)
             thread.status_updated.connect(lambda status: self.tray_menu.set_status_label(*status))
@@ -122,7 +119,7 @@ class MainWindow(QMainWindow):
         del self._connect_to_server_thread
         self._connect_to_server_thread = None
         if not self._client_connection_check_timer:
-            self._client_connection_check_timer = self.startTimer(20000)
+            self._client_connection_check_timer = self.startTimer(5000)
 
     def closeEvent(self, event):
         if self._client_connection_check_timer:
@@ -180,7 +177,6 @@ class ConnectToServerThread(QThread):
                 self.status_updated.emit((STATUS_CLIENT_ERROR, e.errno, client.server_name))
             print e
             client.close()
-            self.client = None
         else:
             self.client = client
             self.status_updated.emit((STATUS_CLIENT_CONNECTED, client.server_name))

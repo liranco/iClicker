@@ -32,7 +32,12 @@ class MainServerHandler(StreamRequestHandler):
         self.wfile.write(json.dumps(kwargs))
 
     def _get(self):
-        data = self.request.recv(1024)
+        try:
+            data = self.request.recv(1024)
+        except socket.error as e:
+            if e.errno == socket.errno.EWOULDBLOCK:
+                return None, None
+            raise
         if data:
             data = json.loads(data)
             return data['code'], data
@@ -40,22 +45,21 @@ class MainServerHandler(StreamRequestHandler):
             return None, None
 
     def handle(self):
-        while True:
-            code, data = self._get()
-            if code is None:
-                return
-            if self.challenge_sequence():
-                self._post(CODE_CHALLENGE_SUCCESS)
-            else:
-                self._post(CODE_CHALLENGE_FAILED)
-                continue
-            if code == CODE_SAY_HELLO:
-                print 'HELLOOOOO from ', data['name']
-                continue
-            if code == CODE_ACCEPT_NOTIFICATIONS:
-                self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
-                print self.server.clients
-                continue
+        code, data = self._get()
+        if code is None:
+            return
+        if self.challenge_sequence():
+            self._post(CODE_CHALLENGE_SUCCESS)
+        else:
+            self._post(CODE_CHALLENGE_FAILED)
+            return
+        if code == CODE_SAY_HELLO:
+            print 'HELLOOOOO from ', data['name']
+            return
+        if code == CODE_ACCEPT_NOTIFICATIONS:
+            self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
+            print self.server.clients
+            return
 
     def challenge_sequence(self):
         # Start authentication
@@ -70,7 +74,7 @@ class MainServerHandler(StreamRequestHandler):
             expected_response = hmac.new(challenge, password_hash, hashlib.sha1).hexdigest()
             self._post(CODE_CHALLENGE_START, challenge=challenge)
         code, result = self._get()
-        assert code == CODE_CHALLENGE_RESPONSE
+        assert code == CODE_CHALLENGE_RESPONSE, code
         response = result['response']
         if response != expected_response:
             return False

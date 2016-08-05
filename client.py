@@ -58,27 +58,27 @@ class Client(object):
         self.server_address = server_address or client_settings.connected_server[1]
         self.server_name = self.server_address
         self.port = port or client_settings.connected_server[2]
-        self.socket = socket(AF_INET, SOCK_STREAM)
+        self.socket = None
         self.client_name = client_name or client_settings.client_name
         if password:
             self.password = password if is_password_hashed else hashlib.sha1(password).hexdigest()
         else:
             self.password = client_settings.server_password
 
+    def _connect(self):
+        self.socket = socket(AF_INET, SOCK_STREAM)
+        self.socket.connect((self.server_address, self.port))
+
     def connect(self):
-        try:
-            self.socket.connect((self.server_address, self.port))
-        except error as e:
-            if e.errno != errno.EISCONN:
-                # Not failed because the socket is already connected.
-                raise
         self.send(CODE_START_COMM)
 
     def send(self, code, **kwargs):
+        self._connect()
         kwargs['code'] = code
         kwargs['name'] = self.client_name
         self.socket.send(json.dumps(kwargs))
         self._challenge()
+        self.close()
 
     def receive(self):
         data = self.socket.recv(1024)
