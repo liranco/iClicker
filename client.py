@@ -68,16 +68,25 @@ class Client(object):
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.socket.connect((self.server_address, self.port))
 
-    def connect(self):
-        self.send(CODE_START_COMM)
-
-    def send(self, code, **kwargs):
+    def _send(self, code, **kwargs):
         self._connect()
         kwargs['code'] = code
         kwargs['name'] = self.client_name
         self.socket.send(json.dumps(kwargs))
         self._challenge()
+
+    def connect(self):
+        self.send(CODE_START_COMM)
+
+    def send(self, code, **kwargs):
+        self._send(code, **kwargs)
         self.close()
+
+    def send_receive(self, code, **kwargs):
+        self._send(code, **kwargs)
+        val = self.receive()
+        self.close()
+        return val
 
     def receive(self):
         data = self.socket.recv(1024)
@@ -104,7 +113,7 @@ class Client(object):
         return response
 
     def dance(self):
-        self.send(CODE_SAY_HELLO)
+        print self.send_receive(CODE_SAY_HELLO)
         self.send(CODE_ACCEPT_NOTIFICATIONS)
 
     def close(self):

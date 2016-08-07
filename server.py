@@ -54,6 +54,7 @@ class MainServerHandler(StreamRequestHandler):
             self._post(CODE_CHALLENGE_FAILED)
             return
         if code == CODE_SAY_HELLO:
+            self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(Settings().server_settings.server_name))
             print 'HELLOOOOO from ', data['name']
             return
         if code == CODE_ACCEPT_NOTIFICATIONS:
