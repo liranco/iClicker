@@ -1,1 +1,0 @@
-When selecting another server in the settings, apply the new connection immediately.

@@ -5,7 +5,6 @@ from settings import Settings
 from consts import *
 from time import time
 from socket import *
-import errno
 import time
 
 

@@ -90,6 +90,7 @@ class MainWindow(QMainWindow):
         self.connect_to_server()
 
     def stop_server(self):
+        self.disconnect_client()
         while len(self.active_server_threads) > 0:
             thread, server = self.active_server_threads.pop()
             if server:
