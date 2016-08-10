@@ -22,6 +22,7 @@ def get_status_formatted(status, *args):
 class Menu(QMenu):
     def __init__(self, parent):
         super(Menu, self).__init__("Mazgan Clicker", parent=parent)
+        self.text, self.color = (None, None)
         self.status_label = QLabel(' ' * 20)
         status_label_action = QWidgetAction(self)
         status_label_action.setDefaultWidget(self.status_label)
@@ -35,12 +36,13 @@ class Menu(QMenu):
         exit_action = self.addAction('Exit')
         exit_action.triggered.connect(parent.close)
 
-    def set_status_label(self, status, *args):
-        text, color = status
+    def set_status_label(self, text, color):
+        self.text, self.color = text, color
         palette = self.status_label.palette()
         palette.setColor(self.status_label.foregroundRole(), color)
         self.status_label.setPalette(palette)
-        self.status_label.setText(text.format(*args))
+        self.status_label.setText(text)
+        self.status_label.setToolTip(text)
 
 
 class MainWindow(QMainWindow):
@@ -110,7 +112,7 @@ class MainWindow(QMainWindow):
     def connect_to_server(self):
         if self._connect_to_server_thread is None:
             thread = ConnectToServerThread(self, client=self.client)
-            thread.status_updated.connect(lambda status: self.tray_menu.set_status_label(*status))
+            thread.status_updated.connect(self.status_updated)
             thread.finished.connect(self.connect_to_server_finished)
             self._connect_to_server_thread = thread
             self._connect_to_server_thread.start()
@@ -121,6 +123,13 @@ class MainWindow(QMainWindow):
         self._connect_to_server_thread = None
         if not self._client_connection_check_timer:
             self._client_connection_check_timer = self.startTimer(5000)
+
+    def status_updated(self, status):
+        (status_text, status_color), args = status
+        args = (args, ) if isinstance(args, basestring) else args
+        status_text = status_text.format(*args)
+        self.tray_menu.set_status_label(status_text, status_color)
+        self.tray.setToolTip(status_text)
 
     def closeEvent(self, event):
         if self._client_connection_check_timer:
