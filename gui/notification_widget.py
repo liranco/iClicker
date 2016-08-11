@@ -35,7 +35,7 @@ class TestWidget(QDialog):
 
 
 class NotificationView(QGraphicsView):
-    def __init__(self, parent, color=None):
+    def __init__(self, parent, color=QColor.fromRgb(0x01, 0x64, 0xc9)):
         super(NotificationView, self).__init__(parent)
         # noinspection PyCallByClass,PyTypeChecker
         self.color = color or QColor.fromRgb(0x95, 0xc8, 0x01)  # type: QColor
@@ -45,11 +45,15 @@ class NotificationView(QGraphicsView):
         self.setStyleSheet("QGraphicsView { border-style: none; }")
         self._inner_rect = QRect(QPoint(0, 0), NOTIFICATION_SIZE)
         self.arrow_middle_point = QPointF(self._inner_rect.width() / 3.5, self._inner_rect.center().y())
+        self.text_body_x = self.arrow_middle_point.x()
         self.circle_text = u'26\u00b0C'
-        self.make_background()
+        self._bg_rect_item = self.make_background()
+        self.title_text_item = None
         arrow = self.create_arrow(self._inner_rect.topLeft(), self.arrow_middle_point, self._inner_rect.bottomLeft())
-        self.make_text(self.circle_text, self.make_circle(arrow))
+        self.make_text(self.circle_text, 15, self.make_circle(arrow))
         self.make_close_circle_button()
+        self.make_title_text('Mazgan has been clicked!')
+        self.make_body_text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna al')
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
@@ -65,6 +69,7 @@ class NotificationView(QGraphicsView):
         bg_shadow.effect.setBlurRadius(20)
         bg_shadow.setGraphicsEffect(bg_shadow.effect)
         bg_shadow.setZValue(bg_rect.zValue() - 1)
+        return bg_rect
 
     def create_arrow(self, a, b, c, position=None, rotation=None):
         # type: (QPoint, QPoint, QPoint) -> QGraphicsPolygonItem
@@ -112,10 +117,11 @@ class NotificationView(QGraphicsView):
         circle.setBrush(Qt.white)
         return circle
 
-    def make_text(self, text, parent):
+    def make_text(self, text, size, parent, color=None):
+        color = color or self.color.darker().lighter()
         text_item = QGraphicsTextItem(text, parent)
-        text_item.setFont(QFont('Calibri', 15, weight=QFont.Bold))
-        text_item.setDefaultTextColor(self.color.darker().lighter())
+        text_item.setFont(QFont('Calibri', size, weight=QFont.Bold))
+        text_item.setDefaultTextColor(color)
         text_rect = text_item.boundingRect()
         text_rect.moveCenter(parent.boundingRect().center())
         text_item.setPos(text_rect.topLeft())
@@ -132,7 +138,18 @@ class NotificationView(QGraphicsView):
         close_circle.set_window(self.parent())
         close_circle.setTransformOriginPoint(close_circle.boundingRect().center())
         close_circle.setRotation(-90)
-        self.make_text('X', close_circle)
+        self.make_text('X', 12, close_circle)
+
+    def make_title_text(self, text):
+        text_item = self.make_text(text, 16, self._bg_rect_item)
+        text_item.setPos(QPoint(self.text_body_x, self._inner_rect.height() / 5))
+        text_item.setTextWidth(self._inner_rect.width() - self.text_body_x)
+        self.title_text_item = text_item
+
+    def make_body_text(self, text):
+        text_item = self.make_text(text, 12, self._bg_rect_item, QColor(Qt.darkGray))
+        text_item.setPos(QPoint(self.text_body_x, self.title_text_item.pos().y() + 30))
+        text_item.setTextWidth(self._inner_rect.width() - self.text_body_x)
 
 
 class CloseWindowButton(QGraphicsEllipseItem):
