@@ -30,12 +30,38 @@ class TestWidget(QDialog):
         msg_geo.moveBottomRight(QApplication.desktop().availableGeometry().bottomRight())
         self.move(msg_geo.topLeft())
 
+        self.ani = QGraphicsBlurEffect()
+        self.ani.setBlurRadius(0)
+        self.notification_view.setGraphicsEffect(self.ani)
+        self.animate = QPropertyAnimation(self.ani, 'blurRadius')
+        self.animate.setStartValue(30)
+        self.animate.setEndValue(0)
+        self.animate.setDuration(500)
+        self.animate.start()
+
+        # self.ani2 = QGraphicsOpacityEffect()
+        # self.ani2.setOpacity(0)
+        # self.notification_view.setGraphicsEffect(self.ani)
+        self.animate2 = QPropertyAnimation(self, 'windowOpacity')
+        self.animate2.setStartValue(0)
+        self.animate2.setEndValue(1)
+        self.animate2.setDuration(200)
+        self.animate2.start()
+
+    def get_opacity(self):
+        return self.windowOpacity()
+
+    def set_opacity(self, value):
+        return self.setWindowOpacity(value)
+
+    opacity = Property(int, get_opacity, set_opacity)
+
     def mouseDoubleClickEvent(self, event):
         self.close()
 
 
 class NotificationView(QGraphicsView):
-    def __init__(self, parent, color=QColor.fromRgb(0x01, 0x64, 0xc9)):
+    def __init__(self, parent, color=None):  # QColor.fromRgb(0x01, 0x64, 0xc9)):
         super(NotificationView, self).__init__(parent)
         # noinspection PyCallByClass,PyTypeChecker
         self.color = color or QColor.fromRgb(0x95, 0xc8, 0x01)  # type: QColor
@@ -53,7 +79,8 @@ class NotificationView(QGraphicsView):
         self.make_text(self.circle_text, 15, self.make_circle(arrow))
         self.make_close_circle_button()
         self.make_title_text('Mazgan has been clicked!')
-        self.make_body_text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna al')
+        self.make_body_text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt'
+                            ' ut labore et dolore magna al')
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
@@ -117,10 +144,10 @@ class NotificationView(QGraphicsView):
         circle.setBrush(Qt.white)
         return circle
 
-    def make_text(self, text, size, parent, color=None):
+    def make_text(self, text, size, parent, color=None, weight=None):
         color = color or self.color.darker().lighter()
         text_item = QGraphicsTextItem(text, parent)
-        text_item.setFont(QFont('Calibri', size, weight=QFont.Bold))
+        text_item.setFont(QFont('Calibri', size, weight=weight or QFont.Bold))
         text_item.setDefaultTextColor(color)
         text_rect = text_item.boundingRect()
         text_rect.moveCenter(parent.boundingRect().center())
@@ -131,7 +158,7 @@ class NotificationView(QGraphicsView):
         close_arrow = self.create_arrow(QPoint(0, 0),
                                         QPoint(35, 35),
                                         QPoint(0, 70),
-                                        position=self._inner_rect.topRight(),
+                                        position=self._inner_rect.topRight() - QPoint(0, 10),
                                         rotation=90)
 
         close_circle = self.make_circle(close_arrow, CloseWindowButton)
@@ -147,7 +174,7 @@ class NotificationView(QGraphicsView):
         self.title_text_item = text_item
 
     def make_body_text(self, text):
-        text_item = self.make_text(text, 12, self._bg_rect_item, QColor(Qt.darkGray))
+        text_item = self.make_text(text, 12, self._bg_rect_item, QColor(Qt.darkGray).darker(), QFont.Normal)
         text_item.setPos(QPoint(self.text_body_x, self.title_text_item.pos().y() + 30))
         text_item.setTextWidth(self._inner_rect.width() - self.text_body_x)
 
