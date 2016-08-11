@@ -21,7 +21,6 @@ class TestWidget(QDialog):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setStyleSheet('background:transparent;')
-        # self.setStyleSheet('background:rgba(89, 255, 192, 100);')
         # Set it's size
         self.setGeometry(QRect(QPoint(0, 0), QSize(NOTIFICATION_SIZE.width() * 1.2, NOTIFICATION_SIZE.height() * 1.6)))
         msg_geo = self.geometry()  # type: QRect
