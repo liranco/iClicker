@@ -1,5 +1,5 @@
 from consts import *
-from settings import Settings
+from settings import ServerSettings
 from threading import Thread
 from SocketServer import *
 import socket
@@ -15,7 +15,7 @@ class UDPBroadcastsHandler(DatagramRequestHandler):
         data = json.loads(self.rfile.read())
         code = data['code']
         if code == CODE_FIND_SERVER:
-            settings = Settings().server_settings
+            settings = ServerSettings()
             self.wfile.write(json.dumps(dict(server_name=settings.server_name, port=settings.server_port)))
 
 
@@ -55,7 +55,7 @@ class MainServerHandler(StreamRequestHandler):
             self._post(CODE_CHALLENGE_FAILED)
             return
         if code == CODE_SAY_HELLO:
-            self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(Settings().server_settings.server_name))
+            self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(ServerSettings().server_name))
             print 'HELLOOOOO from ', data['name']
             if self.server.updates_method:
                 self.server.updates_method('Say Hello!', 'HELLOOOOO from {}'.format(data['name']))
@@ -67,7 +67,7 @@ class MainServerHandler(StreamRequestHandler):
 
     def challenge_sequence(self):
         # Start authentication
-        password = Settings().server_settings.server_password
+        password = ServerSettings().server_password
         if not password:
             # No challenge required.
             expected_response = None
@@ -112,7 +112,8 @@ def answer_search_requests(threaded=True):
 
 def run_server(threaded=True, updates_method=None):
     try:
-        server = MainServer(Settings().server_settings.server_name, ('0.0.0.0', Settings().server_settings.server_port),
+        settings = ServerSettings()
+        server = MainServer(settings.server_name, ('0.0.0.0', settings.server_port),
                             updates_method)
     except socket.error as error:
         print error

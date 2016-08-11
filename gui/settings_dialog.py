@@ -1,9 +1,11 @@
 from PySide.QtGui import *
 from PySide.QtCore import *
-from settings import Settings
+from settings import Settings, ServerSettings, ClientSettings
 from consts import *
 
 settings = Settings()
+server_settings = ServerSettings()
+client_settings = ClientSettings()
 
 
 class SettingsDialog(QDialog):
@@ -114,16 +116,16 @@ class ServerSettings(BaseModeSettings):
         layout.addRow(QPushButton('Calibrate Clicker', parent=self))
         self.setLayout(layout)
 
-        self.server_name.setText(settings.server_settings.server_name)
-        self.server_port.setValue(settings.server_settings.server_port)
-        self.server_password.setText('x' * settings.server_settings.server_password_length)
+        self.server_name.setText(server_settings.server_name)
+        self.server_port.setValue(server_settings.server_port)
+        self.server_password.setText('x' * server_settings.server_password_length)
         self.server_password.is_changed = False
 
     def save(self):
-        settings.server_settings.server_name = self.server_name.text()
-        settings.server_settings.server_port = self.server_port.value()
+        server_settings.server_name = self.server_name.text()
+        server_settings.server_port = self.server_port.value()
         if self.server_password.is_changed:
-            settings.server_settings.server_password = self.server_password.text()
+            server_settings.server_password = self.server_password.text()
 
 
 class ClientSettings(BaseModeSettings):
@@ -163,14 +165,14 @@ class ClientSettings(BaseModeSettings):
         self.setLayout(layout)
         self.servers_finder_thread = None
 
-        self.client_name.setText(settings.client_settings.client_name)
-        current_server = settings.client_settings.connected_server
+        self.client_name.setText(client_settings.client_name)
+        current_server = client_settings.connected_server
         if current_server:
             name, ip, port = current_server
             self.current_server_name = name
             self.current_server_ip.setText(ip)
             self.current_server_port.setValue(port)
-        self.server_password.setText('x' * settings.client_settings.server_password_length)
+        self.server_password.setText('x' * client_settings.server_password_length)
         self.server_password.is_changed = False
 
     def reload_servers(self):
@@ -224,15 +226,15 @@ class ClientSettings(BaseModeSettings):
             self.servers.clear()
 
     def save(self):
-        settings.client_settings.client_name = self.client_name.text()
+        client_settings.client_name = self.client_name.text()
         if self.current_server_ip.text() == '' or self.current_server_port.value() == 0:
-            settings.client_settings.connected_server = None
+            client_settings.connected_server = None
         else:
-            settings.client_settings.connected_server = (self.current_server_name,
-                                                         self.current_server_ip.text(),
-                                                         self.current_server_port.value())
+            client_settings.connected_server = (self.current_server_name,
+                                                self.current_server_ip.text(),
+                                                self.current_server_port.value())
         if self.server_password.is_changed:
-            settings.client_settings.server_password = self.server_password.text()
+            client_settings.server_password = self.server_password.text()
 
 
 class ServersFinderThread(QThread):
@@ -259,3 +261,11 @@ class ServersFinderThread(QThread):
 
     def stop_me(self):
         self._stopping = True
+
+
+class NotificationSettings(QGroupBox):
+    def __init__(self, parent=None):
+        super(NotificationSettings, self).__init__(title='Notification Settings', parent=parent)
+        layout = QFormLayout()
+
+        self.setLayout(layout)

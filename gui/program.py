@@ -2,7 +2,7 @@ import os
 import sys
 from PySide.QtGui import *
 from PySide.QtCore import *
-from settings import Settings
+from settings import Settings, ServerSettings, ClientSettings
 from settings_dialog import SettingsDialog
 from consts import *
 
@@ -91,8 +91,8 @@ class MainWindow(QMainWindow):
                                                       updates_method=lambda title, body:
                                                       self.update_notifications_signal.emit((title, body)))))
         self.tray_menu.status_label.setText('Hello')
-        self.client = Client('127.0.0.1', self.settings.server_settings.server_port,
-                             self.settings.server_settings.server_password,
+        self.client = Client('127.0.0.1', ServerSettings().server_port,
+                             ServerSettings().server_password,
                              client_name='Localhost',
                              is_password_hashed=True)
         self.connect_to_server()
@@ -180,7 +180,7 @@ class ConnectToServerThread(QThread):
         import errno
         from client import Client, BadPasswordException, error
         if self.client is None:
-            if self.parent().settings.client_settings.connected_server is None:
+            if ClientSettings().connected_server is None:
                 self.status_updated.emit((STATUS_CLIENT_NOT_SET, ))
                 return
             client = Client()

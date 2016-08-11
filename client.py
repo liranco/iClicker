@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import json
-from settings import Settings
+from settings import ClientSettings
 from consts import *
 from time import time
 from socket import *
@@ -53,7 +53,7 @@ class BadPasswordException(Exception):
 
 class Client(object):
     def __init__(self, server_address=None, port=None, password=None, client_name=None, is_password_hashed=False):
-        client_settings = Settings().client_settings
+        client_settings = ClientSettings()
         self.server_address = server_address or client_settings.connected_server[1]
         self.server_name = self.server_address
         self.port = port or client_settings.connected_server[2]
