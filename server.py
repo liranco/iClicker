@@ -21,6 +21,7 @@ class UDPBroadcastsHandler(DatagramRequestHandler):
 
 class MainServerHandler(StreamRequestHandler):
     def __init__(self, request, client_address, server):
+        self.server = None  # type: MainServer
         StreamRequestHandler.__init__(self, request, client_address, server)
 
     def setup(self):
@@ -56,6 +57,8 @@ class MainServerHandler(StreamRequestHandler):
         if code == CODE_SAY_HELLO:
             self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(Settings().server_settings.server_name))
             print 'HELLOOOOO from ', data['name']
+            if self.server.updates_method:
+                self.server.updates_method('Say Hello!', 'HELLOOOOO from {}'.format(data['name']))
             return
         if code == CODE_ACCEPT_NOTIFICATIONS:
             self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
@@ -84,11 +87,12 @@ class MainServerHandler(StreamRequestHandler):
 
 
 class MainServer(ThreadingTCPServer):
-    def __init__(self, server_name, server_address):
+    def __init__(self, server_name, server_address, updates_method=None):
         ThreadingTCPServer.__init__(self, server_address, MainServerHandler)
         self.clients = {}
         self.server_name = server_name
         self.timeout = 5
+        self.updates_method = updates_method
 
 
 def answer_search_requests(threaded=True):
@@ -106,9 +110,10 @@ def answer_search_requests(threaded=True):
         server.serve_forever()
 
 
-def run_server(threaded=True):
+def run_server(threaded=True, updates_method=None):
     try:
-        server = MainServer(Settings().server_settings.server_name, ('0.0.0.0', Settings().server_settings.server_port))
+        server = MainServer(Settings().server_settings.server_name, ('0.0.0.0', Settings().server_settings.server_port),
+                            updates_method)
     except socket.error as error:
         print error
         return None, None

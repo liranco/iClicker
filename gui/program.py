@@ -46,6 +46,8 @@ class Menu(QMenu):
 
 
 class MainWindow(QMainWindow):
+    update_notifications_signal = Signal(tuple)
+
     def __init__(self, parent=None, flags=0):
         super(MainWindow, self).__init__(parent, flags)
         self.tray = QSystemTrayIcon(icon=QIcon(os.path.join(os.path.dirname(__file__), 'icon2.png')), parent=self)
@@ -56,6 +58,8 @@ class MainWindow(QMainWindow):
         self.client = None
         self._connect_to_server_thread = None  # type: ConnectToServerThread
         self._client_connection_check_timer = None
+        self.notification_widget = None
+        self.update_notifications_signal.connect(lambda message: self._show_notification(*message))
         if self.settings.mode == SERVER_MODE:
             self.start_server()
         else:
@@ -83,13 +87,20 @@ class MainWindow(QMainWindow):
         self.disconnect_client()
         from server import answer_search_requests, run_server
         self.active_server_threads.extend((answer_search_requests(threaded=True),
-                                           run_server(threaded=True)))
+                                           run_server(threaded=True,
+                                                      updates_method=lambda title, body:
+                                                      self.update_notifications_signal.emit((title, body)))))
         self.tray_menu.status_label.setText('Hello')
         self.client = Client('127.0.0.1', self.settings.server_settings.server_port,
                              self.settings.server_settings.server_password,
                              client_name='Localhost',
                              is_password_hashed=True)
         self.connect_to_server()
+
+    def _show_notification(self, title, body):
+        from notification_widget import TestWidget
+        self.notification_widget = TestWidget(self, title=title, body=body)
+        self.notification_widget.exec_()
 
     def stop_server(self):
         self.disconnect_client()
