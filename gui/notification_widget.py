@@ -9,11 +9,11 @@ NOTIFICATION_SIZE = QSize(NOTIFICATION_SIZE_WIDTH, NOTIFICATION_SIZE_WIDTH / NOT
 
 
 class TestWidget(QDialog):
-    def __init__(self):
-        super(TestWidget, self).__init__()
+    def __init__(self, parent=None, title=None, body=None):
+        super(TestWidget, self).__init__(parent)
         layout = QBoxLayout(QBoxLayout.BottomToTop)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.notification_view = NotificationView(self)
+        self.notification_view = NotificationView(self, title=title, body=body)
         layout.addWidget(self.notification_view)
         layout.addSpacing(NOTIFICATION_SIZE.width() / 4)
         self.setLayout(layout)
@@ -28,42 +28,43 @@ class TestWidget(QDialog):
         # noinspection PyArgumentList
         msg_geo.moveBottomRight(QApplication.desktop().availableGeometry().bottomRight())
         self.move(msg_geo.topLeft())
+        self.blur_effect = QGraphicsBlurEffect()
+        self.blur_effect.setBlurRadius(0)
+        self.notification_view.setGraphicsEffect(self.blur_effect)
+        self.blur_animator = QPropertyAnimation(self.blur_effect, 'blurRadius')
+        self.opacity_animator = QPropertyAnimation(self, 'windowOpacity')
+        self.animate_in()
 
-        self.ani = QGraphicsBlurEffect()
-        self.ani.setBlurRadius(0)
-        self.notification_view.setGraphicsEffect(self.ani)
-        self.animate = QPropertyAnimation(self.ani, 'blurRadius')
-        self.animate.setStartValue(30)
-        self.animate.setEndValue(0)
-        self.animate.setDuration(500)
-        self.animate.start()
+    def animate_in(self):
+        self.blur_animator.setStartValue(30)
+        self.blur_animator.setEndValue(0)
+        self.blur_animator.setDuration(200)
+        self.opacity_animator.setStartValue(0)
+        self.opacity_animator.setEndValue(1)
+        self.opacity_animator.setDuration(200)
+        self.opacity_animator.start()
+        self.blur_animator.start()
 
-        # self.ani2 = QGraphicsOpacityEffect()
-        # self.ani2.setOpacity(0)
-        # self.notification_view.setGraphicsEffect(self.ani)
-        self.animate2 = QPropertyAnimation(self, 'windowOpacity')
-        self.animate2.setStartValue(0)
-        self.animate2.setEndValue(1)
-        self.animate2.setDuration(200)
-        self.animate2.start()
-
-    def get_opacity(self):
-        return self.windowOpacity()
-
-    def set_opacity(self, value):
-        return self.setWindowOpacity(value)
-
-    opacity = Property(int, get_opacity, set_opacity)
+    def animate_out(self):
+        self.blur_animator.setStartValue(0)
+        self.blur_animator.setEndValue(30)
+        self.blur_animator.setDuration(500)
+        self.opacity_animator.setStartValue(1)
+        self.opacity_animator.setEndValue(0)
+        self.opacity_animator.setDuration(200)
+        self.opacity_animator.start()
+        self.blur_animator.start()
+        self.blur_animator.finished.connect(self.close)
 
     def mouseDoubleClickEvent(self, event):
         self.close()
 
 
 class NotificationView(QGraphicsView):
-    def __init__(self, parent, color=None):  # QColor.fromRgb(0x01, 0x64, 0xc9)):
+    def __init__(self, parent, color=None, title=None, body=None):  #
         super(NotificationView, self).__init__(parent)
         # noinspection PyCallByClass,PyTypeChecker
-        self.color = color or QColor.fromRgb(0x95, 0xc8, 0x01)  # type: QColor
+        self.color = color or QColor.fromRgb(0xfb, 0x6f, 0xef)  # type: QColor
         self._scene = QGraphicsScene(self)
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setScene(self._scene)
@@ -77,9 +78,8 @@ class NotificationView(QGraphicsView):
         arrow = self.create_arrow(self._inner_rect.topLeft(), self.arrow_middle_point, self._inner_rect.bottomLeft())
         self.make_text(self.circle_text, 15, self.make_circle(arrow))
         self.make_close_circle_button()
-        self.make_title_text('Mazgan has been clicked!')
-        self.make_body_text('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt'
-                            ' ut labore et dolore magna al')
+        self.make_title_text(title or 'I Love Vered!')
+        self.make_body_text(body or 'Vered is so pretty and funny and lovely and she\'s amazing and I love her so much!')
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
@@ -188,14 +188,14 @@ class CloseWindowButton(QGraphicsEllipseItem):
         self._window = window
 
     def mousePressEvent(self, event):
-        self._window.close()
+        self._window.animate_out()
         super(CloseWindowButton, self).mousePressEvent(event)
 
 
 def main():
     app = QApplication(sys.argv)
     a = TestWidget()
-    a.show()
+    a.exec_()
     app.exec_()
 
 
