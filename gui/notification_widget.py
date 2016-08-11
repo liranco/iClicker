@@ -3,7 +3,7 @@ from PySide.QtGui import *
 from PySide.QtCore import *
 
 
-NOTIFICATION_SIZE_WIDTH = 440
+NOTIFICATION_SIZE_WIDTH = 350
 NOTIFICATION_SIZE_RATIO = 2
 NOTIFICATION_SIZE = QSize(NOTIFICATION_SIZE_WIDTH, NOTIFICATION_SIZE_WIDTH / NOTIFICATION_SIZE_RATIO)
 
@@ -11,10 +11,11 @@ NOTIFICATION_SIZE = QSize(NOTIFICATION_SIZE_WIDTH, NOTIFICATION_SIZE_WIDTH / NOT
 class TestWidget(QDialog):
     def __init__(self):
         super(TestWidget, self).__init__()
-        layout = QHBoxLayout()
+        layout = QBoxLayout(QBoxLayout.BottomToTop)
         layout.setContentsMargins(0, 0, 0, 0)
         self.notification_view = NotificationView(self)
         layout.addWidget(self.notification_view)
+        layout.addSpacing(NOTIFICATION_SIZE.width() / 4)
         self.setLayout(layout)
         # Create a border-less transparent window
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.Tool)
@@ -22,12 +23,11 @@ class TestWidget(QDialog):
         self.setStyleSheet('background:transparent;')
         # self.setStyleSheet('background:rgba(89, 255, 192, 100);')
         # Set it's size
-        self.setGeometry(QRect(QPoint(0, 0), NOTIFICATION_SIZE))
+        self.setGeometry(QRect(QPoint(0, 0), QSize(NOTIFICATION_SIZE.width() * 1.2, NOTIFICATION_SIZE.height() * 1.6)))
         msg_geo = self.geometry()  # type: QRect
         # Move it to the bottom right corner
         # noinspection PyArgumentList
         msg_geo.moveBottomRight(QApplication.desktop().availableGeometry().bottomRight())
-        msg_geo.adjust(-20, -20, 0, 0)
         self.move(msg_geo.topLeft())
 
     def mouseDoubleClickEvent(self, event):
@@ -43,12 +43,13 @@ class NotificationView(QGraphicsView):
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setScene(self._scene)
         self.setStyleSheet("QGraphicsView { border-style: none; }")
-        self._inner_rect = QRect(QPoint(0, 0), NOTIFICATION_SIZE * 0.8)
+        self._inner_rect = QRect(QPoint(0, 0), NOTIFICATION_SIZE)
         self.arrow_middle_point = QPointF(self._inner_rect.width() / 3.5, self._inner_rect.center().y())
-        self.text = 'ABC'
+        self.circle_text = u'26\u00b0C'
         self.make_background()
-        self.make_arrow()
-        self.make_circle()
+        arrow = self.create_arrow(self._inner_rect.topLeft(), self.arrow_middle_point, self._inner_rect.bottomLeft())
+        self.make_text(self.circle_text, self.make_circle(arrow))
+        self.make_close_circle_button()
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
@@ -65,45 +66,87 @@ class NotificationView(QGraphicsView):
         bg_shadow.setGraphicsEffect(bg_shadow.effect)
         bg_shadow.setZValue(bg_rect.zValue() - 1)
 
-    def make_arrow(self):
+    def create_arrow(self, a, b, c, position=None, rotation=None):
+        # type: (QPoint, QPoint, QPoint) -> QGraphicsPolygonItem
         arrow_polygon = QPolygonF()
-        arrow_polygon += self._inner_rect.topLeft()
-        arrow_polygon += self.arrow_middle_point
-        arrow_polygon += self._inner_rect.bottomLeft()
-        arrow_gradient = QLinearGradient(0, 0, self.arrow_middle_point.x(), 0)
+        arrow_polygon += a
+        arrow_polygon += b
+        arrow_polygon += c
+        arrow_gradient = QLinearGradient(a.x(), 0, b.x(), 0)
         arrow_gradient.setColorAt(0, self.color.darker())
         arrow_gradient.setColorAt(0.5, self.color)
-        arrow = self._scene.addPolygon(arrow_polygon, pen=Qt.NoPen, brush=QBrush(arrow_gradient))
+        arrow = QGraphicsPolygonItem(arrow_polygon)
+        arrow.a, arrow.b, arrow.c = (a, b, c)
+        arrow.setPen(Qt.NoPen)
+        arrow.setBrush(QBrush(arrow_gradient))
         arrow_shadow_polygon = QPolygonF()
-        arrow_shadow_polygon += self._inner_rect.topLeft() + QPoint(5, 5)
-        arrow_shadow_polygon += self.arrow_middle_point + QPointF(0, 10)
-        arrow_shadow_polygon += self._inner_rect.bottomLeft() + QPoint(5, 0)
-        arrow_shadow = self._scene.addPolygon(arrow_shadow_polygon, pen=Qt.NoPen, brush=QBrush(QColor(Qt.black)))
-        arrow_shadow.setZValue(arrow.zValue() - 1)
+        arrow_shadow_polygon += a + QPoint(5, 5)
+        arrow_shadow_polygon += b + QPoint(0, 10)
+        arrow_shadow_polygon += c + QPoint(5, 0)
+        arrow_shadow = QGraphicsPolygonItem(arrow_shadow_polygon, arrow)
+        arrow_shadow.setParentItem(arrow)
+        arrow_shadow.setPen(Qt.NoPen)
+        arrow_shadow.setBrush(Qt.black)
         arrow_shadow.effect = QGraphicsBlurEffect()
         arrow_shadow.effect.setBlurRadius(10)
         arrow_shadow.setGraphicsEffect(arrow_shadow.effect)
 
-    def make_circle(self):
-        circle_size = self.arrow_middle_point.x() / 2
+        if rotation:
+            arrow.setRotation(rotation)
+            arrow_shadow.setRotation(rotation)
+        if position:
+            arrow.setPos(position)
+            arrow_shadow.setPos(position)
+
+        self._scene.addItem(arrow_shadow)
+        self._scene.addItem(arrow)
+        return arrow
+
+    def make_circle(self, parent, custom_cls=None):
+        circle_size = parent.b.x() / 2
         circle_rect = QRectF(0, 0, circle_size, circle_size)
-        circle_rect.moveCenter(QPointF(self.arrow_middle_point.x() / 2 - circle_size / 4, self.arrow_middle_point.y()))
-        circle = self._scene.addEllipse(circle_rect, pen=QPen(self.color, 4), brush=QBrush(Qt.white))
-        text = QGraphicsTextItem(self.text, circle)
-        text.setFont(QFont('Calibri', 15, weight=QFont.Bold))
-        text.setDefaultTextColor(self.color.darker().lighter())
+        circle_rect.moveCenter(QPointF(parent.b.x() / 2 - circle_size / 4, parent.b.y()))
+        cls = custom_cls or QGraphicsEllipseItem
+        circle = cls(circle_rect, parent=parent)
+        circle.setPen(QPen(self.color, circle_rect.width() / 15))
+        circle.setBrush(Qt.white)
+        return circle
 
-        format = QTextBlockFormat()
-        format.setAlignment(Qt.AlignCenter)
-        cursor = text.textCursor()
-        cursor.select(QTextCursor.Document)
-        cursor.mergeBlockFormat(format)
-        cursor.clearSelection()
-        text.setTextCursor(cursor)
+    def make_text(self, text, parent):
+        text_item = QGraphicsTextItem(text, parent)
+        text_item.setFont(QFont('Calibri', 15, weight=QFont.Bold))
+        text_item.setDefaultTextColor(self.color.darker().lighter())
+        text_rect = text_item.boundingRect()
+        text_rect.moveCenter(parent.boundingRect().center())
+        text_item.setPos(text_rect.topLeft())
+        return text_item
 
-        text_rect = text.boundingRect()
-        text_rect.moveCenter(circle.boundingRect().center())
-        text.setPos(text_rect.topLeft())
+    def make_close_circle_button(self):
+        close_arrow = self.create_arrow(QPoint(0, 0),
+                                        QPoint(35, 35),
+                                        QPoint(0, 70),
+                                        position=self._inner_rect.topRight(),
+                                        rotation=90)
+
+        close_circle = self.make_circle(close_arrow, CloseWindowButton)
+        close_circle.set_window(self.parent())
+        close_circle.setTransformOriginPoint(close_circle.boundingRect().center())
+        close_circle.setRotation(-90)
+        self.make_text('X', close_circle)
+
+
+class CloseWindowButton(QGraphicsEllipseItem):
+    def __init__(self, rect, parent):
+        super(CloseWindowButton, self).__init__(rect, parent)
+        self._window = None
+        self.setCursor(Qt.PointingHandCursor)
+
+    def set_window(self, window):
+        self._window = window
+
+    def mousePressEvent(self, event):
+        self._window.close()
+        super(CloseWindowButton, self).mousePressEvent(event)
 
 
 def main():
