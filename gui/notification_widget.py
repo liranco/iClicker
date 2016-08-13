@@ -16,13 +16,15 @@ class NotificationSettings(BaseSettingsGroup):
     @property
     def color(self):
         value = self.value("color", DEFAULT_COLOR)
-        assert isinstance(value, QColor)
+        if isinstance(value, (tuple, list)):
+            value = QColor.fromRgb(*map(int, value))
+        assert isinstance(value, QColor), type(value)
         return value
 
     @color.setter
     def color(self, value):
         assert isinstance(value, QColor)
-        self.set_value("color", value)
+        self.set_value("color", value.toTuple()[:3])
 
     @property
     def duration(self):
