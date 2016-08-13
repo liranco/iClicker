@@ -19,7 +19,7 @@ class UDPBroadcastsHandler(DatagramRequestHandler):
             self.wfile.write(json.dumps(dict(server_name=settings.server_name, port=settings.server_port)))
 
 
-class MainServerHandler(StreamRequestHandler):
+class BaseServerHandler(StreamRequestHandler):
     def __init__(self, request, client_address, server):
         self.server = None  # type: MainServer
         StreamRequestHandler.__init__(self, request, client_address, server)
@@ -45,6 +45,13 @@ class MainServerHandler(StreamRequestHandler):
         else:
             return None, None
 
+    def handlers(self):
+        """
+
+        :rtype: dict[int, types.FunctionType]
+        """
+        raise NotImplementedError()
+
     def handle(self):
         code, data = self._get()
         if code is None:
@@ -54,15 +61,10 @@ class MainServerHandler(StreamRequestHandler):
         else:
             self._post(CODE_CHALLENGE_FAILED)
             return
-        if code == CODE_SAY_HELLO:
-            self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(ServerSettings().server_name))
-            if self.server.updates_method:
-                self.server.updates_method('Say Hello!', 'HELLOOOOO from {}'.format(data['name']))
-            return
-        if code == CODE_ACCEPT_NOTIFICATIONS:
-            self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
-            self.server.updates_method('Connected Servers', '\r\n'.join(self.server.clients))
-            return
+        # Call the relevant handler
+        handlers = {CODE_START_COMM: lambda **_: None}
+        handlers.update(self.handlers())
+        handlers[code](**data)
 
     def challenge_sequence(self):
         # Start authentication
@@ -83,6 +85,23 @@ class MainServerHandler(StreamRequestHandler):
             return False
         else:
             return True
+
+
+class MainServerHandler(BaseServerHandler):
+    def handlers(self):
+        return {
+            CODE_SAY_HELLO: self.handle_say_hello,
+            CODE_ACCEPT_NOTIFICATIONS: self.handle_accept_notifications
+        }
+
+    def handle_say_hello(self, name, **_):
+        self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(ServerSettings().server_name))
+        if self.server.updates_method:
+            self.server.updates_method('Say Hello!', 'HELLOOOOO from {}'.format(name))
+
+    def handle_accept_notifications(self, **_):
+        self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
+        self.server.updates_method('Connected Servers', '\r\n'.join(self.server.clients))
 
 
 class MainServer(ThreadingTCPServer):
