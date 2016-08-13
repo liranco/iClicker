@@ -61,14 +61,15 @@ class SettingsDialog(QDialog):
         new_mode.activated()
         self.current_mode = new_mode
 
-    def all_modes(self):
+    def all_settings(self):
         """
-        :rtype: list[BaseModeSettings]
+        :rtype: list[BaseSettings]
         """
-        return [self.settings_groups.widget(i) for i in xrange(self.settings_groups.count())]
+        return [self.settings_groups.widget(i) for i in xrange(self.settings_groups.count())] + \
+               [self.notification_settings]
 
     def closeEvent(self, event):
-        [widget.closed() for widget in self.all_modes()]
+        [widget.closed() for widget in self.all_settings()]
 
     def ok_button_clicked(self):
         self.apply_button_clicked()
@@ -76,7 +77,7 @@ class SettingsDialog(QDialog):
 
     def apply_button_clicked(self):
         settings.mode = self.mode.currentText()
-        [widget.save() for widget in self.all_modes()]
+        [widget.save() for widget in self.all_settings()]
         self._is_apply_clicked = True
 
     def exec_(self):
@@ -85,7 +86,15 @@ class SettingsDialog(QDialog):
             return self.mode.currentText()
 
 
-class BaseModeSettings(QGroupBox):
+class BaseSettings(QGroupBox):
+    def closed(self):
+        pass
+
+    def save(self):
+        pass
+
+
+class BaseModeSettings(BaseSettings):
     def make_password_field(self):
         server_password = QLineEdit(parent=self)
         server_password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
@@ -97,12 +106,6 @@ class BaseModeSettings(QGroupBox):
         self.server_password.is_changed = True
 
     def activated(self):
-        pass
-
-    def closed(self):
-        pass
-
-    def save(self):
         pass
 
 
@@ -267,7 +270,7 @@ class ServersFinderThread(QThread):
         self._stopping = True
 
 
-class NotificationSettings(QGroupBox):
+class NotificationSettings(BaseSettings):
     def __init__(self, parent=None):
         super(NotificationSettings, self).__init__(title='Notification Settings', parent=parent)
         layout = QFormLayout()
@@ -285,15 +288,23 @@ class NotificationSettings(QGroupBox):
         color_pick_button.clicked.connect(self._get_color)
         color_widgets.layout().addWidget(color_pick_button, 0, 1)
         layout.addRow('Notification Color:', color_widgets)
-        layout.addRow('Test', QPushButton('hey'))
+        self.notification_duration = QSpinBox(self)
+        self.notification_duration.setMinimum(1)
+        self.notification_duration.setValue(notification_settings.duration)
+        layout.addRow('Notification Duration', self.notification_duration)
         self.setLayout(layout)
 
-    def _set_color(self):
-        r, g, b = notification_settings.color.toTuple()[:3]
+    def _set_color(self, color=None):
+        color = color or notification_settings.color
+        r, g, b = color.toTuple()[:3]
         self.color_display.setStyleSheet('QWidget { background-color: #%.2x%.2x%.2x; border: none; }' % (r, g, b))
+        self._selected_color = color
 
     def _get_color(self):
         dialog = QColorDialog(self, notification_settings.color)
         dialog.exec_()
-        notification_settings.color = dialog.selectedColor()
-        self._set_color()
+        self._set_color(dialog.selectedColor())
+
+    def save(self):
+        notification_settings.color = self._selected_color
+        notification_settings.duration = self.notification_duration.value()

@@ -9,7 +9,7 @@ NOTIFICATION_SIZE_RATIO = 2
 NOTIFICATION_SIZE = QSize(NOTIFICATION_SIZE_WIDTH, NOTIFICATION_SIZE_WIDTH / NOTIFICATION_SIZE_RATIO)
 # noinspection PyCallByClass,PyTypeChecker
 DEFAULT_COLOR = QColor.fromRgb(0x95, 0xc8, 0x01)
-DEFAULT_DURATION = 10  # seconds
+DEFAULT_DURATION = 5  # seconds
 
 
 class NotificationSettings(BaseSettingsGroup):
@@ -26,8 +26,7 @@ class NotificationSettings(BaseSettingsGroup):
 
     @property
     def duration(self):
-        value = self.value("duration", DEFAULT_DURATION)
-        assert isinstance(value, int)
+        value = int(self.value("duration", DEFAULT_DURATION))
         return value
 
     @duration.setter
@@ -46,7 +45,7 @@ class NotificationDialog(QDialog):
         layout.addSpacing(NOTIFICATION_SIZE.width() / 4)
         self.setLayout(layout)
         # Create a border-less transparent window
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.Tool | Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setStyleSheet('background:transparent;')
         # Set it's size
@@ -55,37 +54,42 @@ class NotificationDialog(QDialog):
         # Move it to the bottom right corner
         # noinspection PyArgumentList
         msg_geo.moveBottomRight(QApplication.desktop().availableGeometry().bottomRight())
+        self._closing = False
         self.move(msg_geo.topLeft())
         self.blur_effect = QGraphicsBlurEffect()
         self.blur_effect.setBlurRadius(0)
         self.notification_view.setGraphicsEffect(self.blur_effect)
-        self.blur_animator = QPropertyAnimation(self.blur_effect, 'blurRadius')
-        self.opacity_animator = QPropertyAnimation(self, 'windowOpacity')
+        self.blur_animator = QPropertyAnimation(self.blur_effect, 'blurRadius', self)
+        self.setWindowOpacity(0)
+        self.opacity_animator = QPropertyAnimation(self, 'windowOpacity', self)
         self.setMouseTracking(True)
         self.animate_in()
+        self.duration_reached_timer = self.startTimer(NotificationSettings().duration * 1000)
 
     def animate_in(self):
         self.blur_animator.setStartValue(30)
         self.blur_animator.setEndValue(0)
         self.blur_animator.setDuration(200)
-        self.opacity_animator.setStartValue(0)
-        self.opacity_animator.setEndValue(0.5)
+        self.opacity_animator.setStartValue(self.windowOpacity())
+        self.opacity_animator.setEndValue(0.7)
         self.opacity_animator.setDuration(200)
         self.opacity_animator.start()
         self.blur_animator.start()
 
     def animate_out(self):
+        self._closing = True
         self.blur_animator.setStartValue(0)
         self.blur_animator.setEndValue(30)
         self.blur_animator.setDuration(350)
-        self.opacity_animator.setStartValue(1)
+        self.opacity_animator.setStartValue(self.windowOpacity())
         self.opacity_animator.setEndValue(0)
         self.opacity_animator.setDuration(350)
         self.opacity_animator.start()
         self.blur_animator.start()
-        self.blur_animator.finished.connect(self.close)
 
     def enterEvent(self, event):
+        if self._closing:
+            return
         if self.opacity_animator.state() == QPropertyAnimation.Running:
             self.opacity_animator.stop()
         self.opacity_animator.setStartValue(self.windowOpacity())
@@ -98,11 +102,26 @@ class NotificationDialog(QDialog):
         if self.opacity_animator.state() == QPropertyAnimation.Running:
             self.opacity_animator.stop()
         self.opacity_animator.setStartValue(self.windowOpacity())
-        self.opacity_animator.setEndValue(0.5)
+        self.opacity_animator.setEndValue(0.7)
         self.opacity_animator.setDuration(200)
         self.opacity_animator.start()
         super(NotificationDialog, self).leaveEvent(event)
 
+    def timerEvent(self, event):
+        if event.timerId() == self.duration_reached_timer and not self.underMouse():
+            self.close()
+        super(NotificationDialog, self).timerEvent(event)
+
+    def closeEvent(self, event):
+        if self._closing:
+            if self.duration_reached_timer:
+                self.killTimer(self.duration_reached_timer)
+            event.accept()
+            super(NotificationDialog, self).closeEvent(event)
+        else:
+            self.animate_out()
+            event.ignore()
+            self.blur_animator.finished.connect(self.close)
 
 
 class NotificationView(QGraphicsView):
@@ -232,7 +251,7 @@ class CloseWindowButton(QGraphicsEllipseItem):
         self._window = window
 
     def mousePressEvent(self, event):
-        self._window.animate_out()
+        self._window.close()
         super(CloseWindowButton, self).mousePressEvent(event)
 
 
