@@ -38,11 +38,14 @@ class NotificationSettings(BaseSettingsGroup):
 
     @property
     def notification_expires(self):
-        return bool(self.value("notification_expires", True))
+        value = self.value("notification_expires", True)
+        if isinstance(value, basestring):
+            value = value.lower() == 'true'
+        assert isinstance(value, bool)
+        return value
 
     @notification_expires.setter
     def notification_expires(self, value):
-        print value
         self.set_value("notification_expires", bool(value))
 
 

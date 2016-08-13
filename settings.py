@@ -1,4 +1,3 @@
-import os
 from PySide.QtCore import QSettings
 
 from consts import *
