@@ -14,6 +14,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle('Mazgan Settings')
+        self.setWindowFlags(Qt.Window)
         layout = QVBoxLayout()
         self.current_mode = None
         self.mode = QComboBox(self)
@@ -28,7 +29,7 @@ class SettingsDialog(QDialog):
 
         mode_container = QWidget(self)
         mode_container.setLayout(QFormLayout())
-        mode_container.layout().addRow("Select Your Mode: ", self.mode)
+        mode_container.layout().addRow("Select Your &Mode: ", self.mode)
         layout.addWidget(mode_container)
         layout.addWidget(self.settings_groups)
         self.notification_settings = NotificationSettings(self)
@@ -117,10 +118,10 @@ class ServerSettings(BaseModeSettings):
         self.server_port = QSpinBox(parent=self)
         self.server_port.setMaximum(65535)
         self.server_password = self.make_password_field()
-        layout.addRow("Server Name:", self.server_name)
-        layout.addRow("Server Port:", self.server_port)
-        layout.addRow("Password:", self.server_password)
-        layout.addRow(QPushButton('Calibrate Clicker', parent=self))
+        layout.addRow("Server &Name:", self.server_name)
+        layout.addRow("Server &Port:", self.server_port)
+        layout.addRow("P&assword:", self.server_password)
+        layout.addRow(QPushButton('&Calibrate Clicker', parent=self))
         self.setLayout(layout)
 
         self.server_name.setText(server_settings.server_name)
@@ -136,19 +137,19 @@ class ServerSettings(BaseModeSettings):
 
 
 class ClientSettings(BaseModeSettings):
-    LOAD_SERVERS_TEXT = "Load Servers"
+    LOAD_SERVERS_TEXT = "&Load Servers"
     STOP_LOADING_SERVERS_TEXT = "Click to Stop."
 
     def __init__(self, parent=None):
         super(ClientSettings, self).__init__(title="Client Settings", parent=parent)
         layout = QFormLayout()
         self.client_name = QLineEdit(parent=self)
-        layout.addRow("Client Name", self.client_name)
+        layout.addRow("Client &Name", self.client_name)
         current_server_row = QWidget(parent=self)
         current_server_row.setLayout(QHBoxLayout())
         current_server_row.layout().setContentsMargins(0, 0, 0, 0)
         self.current_server_ip = QLineEdit(parent=current_server_row)
-        self.current_server_ip.setPlaceholderText("IP Address")
+        self.current_server_ip.setPlaceholderText("&IP Address")
         self.current_server_port = QSpinBox(parent=current_server_row)
         self.current_server_port.setMaximum(65535)
         self.current_server_name = None
@@ -156,14 +157,13 @@ class ClientSettings(BaseModeSettings):
         current_server_row.layout().addWidget(self.current_server_ip)
         current_server_row.layout().addWidget(self.current_server_port)
         layout.addRow("Current Server:", current_server_row)
-        layout.addRow("Server Password:", self.server_password)
+        layout.addRow("Server P&assword:", self.server_password)
         # Setup servers search
         self.servers = QListWidget(self)
         self.servers.currentItemChanged.connect(self.server_picked_from_list)
-        layout.addRow('Pick a server:', self.servers)
+        layout.addRow('&Pick a server:', self.servers)
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setTextVisible(True)
-        self.progress_bar.setFormat("Hello World")
         self.progress_bar.setHidden(True)
         layout.addRow(self.progress_bar)
         self.reload_servers_button = QPushButton(self.LOAD_SERVERS_TEXT)
@@ -276,22 +276,33 @@ class NotificationSettings(BaseSettings):
         layout = QFormLayout()
         color_widgets = QWidget(self)
         color_widgets.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-        color_widgets.setLayout(QGridLayout())
+        color_widgets.setLayout(QHBoxLayout())
+        color_widgets.layout().setContentsMargins(0, 0, 0, 0)
 
         self.color_display = QLabel()
         self.color_display.setFixedSize(16, 16)
         self._set_color()
         self.color_display.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        color_widgets.layout().addWidget(self.color_display, 0, 0)
-        color_pick_button = QPushButton('Set')
+        color_widgets.layout().addWidget(self.color_display)
+        color_pick_button = QPushButton('&Set')
         color_pick_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         color_pick_button.clicked.connect(self._get_color)
-        color_widgets.layout().addWidget(color_pick_button, 0, 1)
+        color_widgets.layout().addWidget(color_pick_button)
         layout.addRow('Notification Color:', color_widgets)
+
+        notification_duration_row = QWidget()
+        notification_duration_row.setLayout(QHBoxLayout())
+        notification_duration_row.layout().setContentsMargins(0, 0, 0, 0)
         self.notification_duration = QSpinBox(self)
         self.notification_duration.setMinimum(1)
         self.notification_duration.setValue(notification_settings.duration)
-        layout.addRow('Notification Duration', self.notification_duration)
+        notification_duration_row.layout().addWidget(self.notification_duration)
+        self.notification_expires = QCheckBox('Stay &Until Closed', self)
+        print 'a', notification_settings.notification_expires
+        self.notification_expires.setChecked(notification_settings.notification_expires)
+        notification_duration_row.layout().addWidget(self.notification_expires)
+
+        layout.addRow('Notification &Duration:', notification_duration_row)
         self.setLayout(layout)
 
     def _set_color(self, color=None):
@@ -301,10 +312,11 @@ class NotificationSettings(BaseSettings):
         self._selected_color = color
 
     def _get_color(self):
-        dialog = QColorDialog(self, notification_settings.color)
+        dialog = QColorDialog(notification_settings.color, self)
         dialog.exec_()
         self._set_color(dialog.selectedColor())
 
     def save(self):
         notification_settings.color = self._selected_color
         notification_settings.duration = self.notification_duration.value()
+        notification_settings.notification_expires = self.notification_expires.isChecked()

@@ -34,6 +34,15 @@ class NotificationSettings(BaseSettingsGroup):
         assert isinstance(value, int)
         self.set_value("duration", value)
 
+    @property
+    def notification_expires(self):
+        return bool(self.value("notification_expires", True))
+
+    @notification_expires.setter
+    def notification_expires(self, value):
+        print value
+        self.set_value("notification_expires", bool(value))
+
 
 class NotificationDialog(QDialog):
     def __init__(self, parent=None, title=None, body=None):
@@ -69,10 +78,10 @@ class NotificationDialog(QDialog):
     def animate_in(self):
         self.blur_animator.setStartValue(30)
         self.blur_animator.setEndValue(0)
-        self.blur_animator.setDuration(200)
+        self.blur_animator.setDuration(300)
         self.opacity_animator.setStartValue(self.windowOpacity())
         self.opacity_animator.setEndValue(0.7)
-        self.opacity_animator.setDuration(200)
+        self.opacity_animator.setDuration(400)
         self.opacity_animator.start()
         self.blur_animator.start()
 
@@ -108,7 +117,9 @@ class NotificationDialog(QDialog):
         super(NotificationDialog, self).leaveEvent(event)
 
     def timerEvent(self, event):
-        if event.timerId() == self.duration_reached_timer and not self.underMouse():
+        if (event.timerId() == self.duration_reached_timer and
+                not self.underMouse() and
+                not NotificationSettings().notification_expires):
             self.close()
         super(NotificationDialog, self).timerEvent(event)
 
