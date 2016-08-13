@@ -85,6 +85,7 @@ class MainWindow(QMainWindow):
     def start_server(self):
         from client import Client
         self.disconnect_client()
+        self.stop_server()
         from server import answer_search_requests, run_server
         self.active_server_threads.extend((answer_search_requests(threaded=True),
                                            run_server(threaded=True,
@@ -98,8 +99,8 @@ class MainWindow(QMainWindow):
         self.connect_to_server()
 
     def _show_notification(self, title, body):
-        from notification_widget import TestWidget
-        self.notification_widget = TestWidget(self, title=title, body=body)
+        from notification_widget import NotificationDialog
+        self.notification_widget = NotificationDialog(self, title=title, body=body)
         self.notification_widget.exec_()
 
     def stop_server(self):

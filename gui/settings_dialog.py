@@ -1,11 +1,13 @@
 from PySide.QtGui import *
 from PySide.QtCore import *
 from settings import Settings, ServerSettings, ClientSettings
+from notification_widget import NotificationSettings
 from consts import *
 
 settings = Settings()
 server_settings = ServerSettings()
 client_settings = ClientSettings()
+notification_settings = NotificationSettings()
 
 
 class SettingsDialog(QDialog):
@@ -29,6 +31,8 @@ class SettingsDialog(QDialog):
         mode_container.layout().addRow("Select Your Mode: ", self.mode)
         layout.addWidget(mode_container)
         layout.addWidget(self.settings_groups)
+        self.notification_settings = NotificationSettings(self)
+        layout.addWidget(self.notification_settings)
 
         self.buttons_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply,
                                             parent=self)
@@ -267,5 +271,29 @@ class NotificationSettings(QGroupBox):
     def __init__(self, parent=None):
         super(NotificationSettings, self).__init__(title='Notification Settings', parent=parent)
         layout = QFormLayout()
+        color_widgets = QWidget(self)
+        color_widgets.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        color_widgets.setLayout(QGridLayout())
 
+        self.color_display = QLabel()
+        self.color_display.setFixedSize(16, 16)
+        self._set_color()
+        self.color_display.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        color_widgets.layout().addWidget(self.color_display, 0, 0)
+        color_pick_button = QPushButton('Set')
+        color_pick_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        color_pick_button.clicked.connect(self._get_color)
+        color_widgets.layout().addWidget(color_pick_button, 0, 1)
+        layout.addRow('Notification Color:', color_widgets)
+        layout.addRow('Test', QPushButton('hey'))
         self.setLayout(layout)
+
+    def _set_color(self):
+        r, g, b = notification_settings.color.toTuple()[:3]
+        self.color_display.setStyleSheet('QWidget { background-color: #%.2x%.2x%.2x; border: none; }' % (r, g, b))
+
+    def _get_color(self):
+        dialog = QColorDialog(self, notification_settings.color)
+        dialog.exec_()
+        notification_settings.color = dialog.selectedColor()
+        self._set_color()

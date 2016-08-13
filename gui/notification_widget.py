@@ -1,16 +1,44 @@
 import sys
 from PySide.QtGui import *
 from PySide.QtCore import *
+from settings import BaseSettingsGroup
 
 
 NOTIFICATION_SIZE_WIDTH = 350
 NOTIFICATION_SIZE_RATIO = 2
 NOTIFICATION_SIZE = QSize(NOTIFICATION_SIZE_WIDTH, NOTIFICATION_SIZE_WIDTH / NOTIFICATION_SIZE_RATIO)
+# noinspection PyCallByClass,PyTypeChecker
+DEFAULT_COLOR = QColor.fromRgb(0x95, 0xc8, 0x01)
+DEFAULT_DURATION = 10  # seconds
 
 
-class TestWidget(QDialog):
+class NotificationSettings(BaseSettingsGroup):
+    @property
+    def color(self):
+        value = self.value("color", DEFAULT_COLOR)
+        assert isinstance(value, QColor)
+        return value
+
+    @color.setter
+    def color(self, value):
+        assert isinstance(value, QColor)
+        self.set_value("color", value)
+
+    @property
+    def duration(self):
+        value = self.value("duration", DEFAULT_DURATION)
+        assert isinstance(value, int)
+        return value
+
+    @duration.setter
+    def duration(self, value):
+        assert isinstance(value, int)
+        self.set_value("duration", value)
+
+
+class NotificationDialog(QDialog):
     def __init__(self, parent=None, title=None, body=None):
-        super(TestWidget, self).__init__(parent)
+        super(NotificationDialog, self).__init__(parent)
         layout = QBoxLayout(QBoxLayout.BottomToTop)
         layout.setContentsMargins(0, 0, 0, 0)
         self.notification_view = NotificationView(self, title=title, body=body)
@@ -33,6 +61,7 @@ class TestWidget(QDialog):
         self.notification_view.setGraphicsEffect(self.blur_effect)
         self.blur_animator = QPropertyAnimation(self.blur_effect, 'blurRadius')
         self.opacity_animator = QPropertyAnimation(self, 'windowOpacity')
+        self.setMouseTracking(True)
         self.animate_in()
 
     def animate_in(self):
@@ -40,7 +69,7 @@ class TestWidget(QDialog):
         self.blur_animator.setEndValue(0)
         self.blur_animator.setDuration(200)
         self.opacity_animator.setStartValue(0)
-        self.opacity_animator.setEndValue(1)
+        self.opacity_animator.setEndValue(0.5)
         self.opacity_animator.setDuration(200)
         self.opacity_animator.start()
         self.blur_animator.start()
@@ -48,23 +77,38 @@ class TestWidget(QDialog):
     def animate_out(self):
         self.blur_animator.setStartValue(0)
         self.blur_animator.setEndValue(30)
-        self.blur_animator.setDuration(500)
+        self.blur_animator.setDuration(350)
         self.opacity_animator.setStartValue(1)
         self.opacity_animator.setEndValue(0)
-        self.opacity_animator.setDuration(200)
+        self.opacity_animator.setDuration(350)
         self.opacity_animator.start()
         self.blur_animator.start()
         self.blur_animator.finished.connect(self.close)
 
-    def mouseDoubleClickEvent(self, event):
-        self.close()
+    def enterEvent(self, event):
+        if self.opacity_animator.state() == QPropertyAnimation.Running:
+            self.opacity_animator.stop()
+        self.opacity_animator.setStartValue(self.windowOpacity())
+        self.opacity_animator.setEndValue(1)
+        self.opacity_animator.setDuration(200)
+        self.opacity_animator.start()
+        super(NotificationDialog, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        if self.opacity_animator.state() == QPropertyAnimation.Running:
+            self.opacity_animator.stop()
+        self.opacity_animator.setStartValue(self.windowOpacity())
+        self.opacity_animator.setEndValue(0.5)
+        self.opacity_animator.setDuration(200)
+        self.opacity_animator.start()
+        super(NotificationDialog, self).leaveEvent(event)
+
 
 
 class NotificationView(QGraphicsView):
     def __init__(self, parent, color=None, title=None, body=None):  #
         super(NotificationView, self).__init__(parent)
-        # noinspection PyCallByClass,PyTypeChecker
-        self.color = color or QColor.fromRgb(0xfb, 0x6f, 0xef)  # type: QColor
+        self.color = color or NotificationSettings().color  # type: QColor
         self._scene = QGraphicsScene(self)
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setScene(self._scene)
@@ -194,7 +238,7 @@ class CloseWindowButton(QGraphicsEllipseItem):
 
 def main():
     app = QApplication(sys.argv)
-    a = TestWidget()
+    a = NotificationDialog()
     a.exec_()
     app.exec_()
 
