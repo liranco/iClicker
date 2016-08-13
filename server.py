@@ -56,13 +56,12 @@ class MainServerHandler(StreamRequestHandler):
             return
         if code == CODE_SAY_HELLO:
             self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(ServerSettings().server_name))
-            print 'HELLOOOOO from ', data['name']
             if self.server.updates_method:
                 self.server.updates_method('Say Hello!', 'HELLOOOOO from {}'.format(data['name']))
             return
         if code == CODE_ACCEPT_NOTIFICATIONS:
             self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
-            print self.server.clients
+            self.server.updates_method('Connected Servers', '\r\n'.join(self.server.clients))
             return
 
     def challenge_sequence(self):

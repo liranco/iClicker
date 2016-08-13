@@ -50,7 +50,9 @@ class NotificationSettings(BaseSettingsGroup):
 
 
 class NotificationDialog(QDialog):
-    def __init__(self, parent=None, title=None, body=None):
+    notifications_count_updated = Signal()
+
+    def __init__(self, parent, title, body, remaining_notifications=None, this_notification_count=1):
         super(NotificationDialog, self).__init__(parent)
         layout = QBoxLayout(QBoxLayout.BottomToTop)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -79,6 +81,9 @@ class NotificationDialog(QDialog):
         self.setMouseTracking(True)
         self.animate_in()
         self.duration_reached_timer = self.startTimer(NotificationSettings().duration * 1000)
+        self.remaining_notifications = remaining_notifications or 0
+        self.this_notification_count = this_notification_count or 0
+        self.notifications_count_updated.emit()
 
     def animate_in(self):
         self.blur_animator.setStartValue(30)
@@ -141,7 +146,8 @@ class NotificationDialog(QDialog):
 
 
 class NotificationView(QGraphicsView):
-    def __init__(self, parent, color=None, title=None, body=None):  #
+    def __init__(self, parent, title, body, color=None):
+        assert isinstance(parent, NotificationDialog)
         super(NotificationView, self).__init__(parent)
         self.color = color or NotificationSettings().color  # type: QColor
         self._scene = QGraphicsScene(self)
@@ -157,8 +163,10 @@ class NotificationView(QGraphicsView):
         arrow = self.create_arrow(self._inner_rect.topLeft(), self.arrow_middle_point, self._inner_rect.bottomLeft())
         self.make_text(self.circle_text, 15, self.make_circle(arrow))
         self.make_close_circle_button()
-        self.make_title_text(title or 'I Love Vered!')
-        self.make_body_text(body or 'Vered is so pretty and funny and lovely and she\'s amazing and I love her so much!')
+        self.make_title_text(title[:25])
+        self.make_body_text(body)
+        self._notifications_count_text = None
+        parent.notifications_count_updated.connect(self.notifications_count_updated)
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
@@ -256,6 +264,21 @@ class NotificationView(QGraphicsView):
         text_item.setPos(QPoint(self.text_body_x, self.title_text_item.pos().y() + 30))
         text_item.setTextWidth(self._inner_rect.width() - self.text_body_x)
 
+    def notifications_count_updated(self):
+        this, remaining = self.parent().this_notification_count, self.parent().remaining_notifications
+        if self._notifications_count_text:
+            self._scene.removeItem(self._notifications_count_text)
+            del self._notifications_count_text
+            self._notifications_count_text = None
+        if remaining > 0 or this > 0:
+            text = '{}/{}'.format(this + 1, remaining + this + 1)
+            text_item = self.make_text(text, 12, self._bg_rect_item, QColor(Qt.darkGray).darker(), QFont.Normal)
+
+            text_rect = text_item.boundingRect()
+            text_rect.moveBottomRight(self._inner_rect.bottomRight() - QPoint(5, 5))
+            text_item.setPos(text_rect.topLeft())
+            self._notifications_count_text = text_item
+
 
 class CloseWindowButton(QGraphicsEllipseItem):
     def __init__(self, rect, parent):
@@ -269,14 +292,3 @@ class CloseWindowButton(QGraphicsEllipseItem):
     def mousePressEvent(self, event):
         self._window.close()
         super(CloseWindowButton, self).mousePressEvent(event)
-
-
-def main():
-    app = QApplication(sys.argv)
-    a = NotificationDialog()
-    a.exec_()
-    app.exec_()
-
-
-if __name__ == '__main__':
-    main()

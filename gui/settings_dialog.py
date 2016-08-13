@@ -298,7 +298,6 @@ class NotificationSettings(BaseSettings):
         self.notification_duration.setValue(notification_settings.duration)
         notification_duration_row.layout().addWidget(self.notification_duration)
         self.notification_expires = QCheckBox('Stay &Until Closed', self)
-        print 'a', notification_settings.notification_expires
         self.notification_expires.setChecked(notification_settings.notification_expires)
         notification_duration_row.layout().addWidget(self.notification_expires)
 

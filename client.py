@@ -113,7 +113,7 @@ class Client(object):
         return response
 
     def dance(self):
-        print self.send_receive(CODE_SAY_HELLO)
+        self.send_receive(CODE_SAY_HELLO)
         self.send(CODE_ACCEPT_NOTIFICATIONS)
 
     def close(self):

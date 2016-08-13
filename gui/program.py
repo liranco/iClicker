@@ -4,6 +4,7 @@ from PySide.QtGui import *
 from PySide.QtCore import *
 from settings import Settings, ServerSettings, ClientSettings
 from settings_dialog import SettingsDialog
+from notification_widget import NotificationDialog
 from consts import *
 
 
@@ -58,7 +59,9 @@ class MainWindow(QMainWindow):
         self.client = None
         self._connect_to_server_thread = None  # type: ConnectToServerThread
         self._client_connection_check_timer = None
-        self.notification_widget = None
+        self.notification_widget = None  # type: NotificationDialog
+        self._notifications_queue = []
+        self._notifications_passed = 0
         self.update_notifications_signal.connect(lambda message: self._show_notification(*message))
         if self.settings.mode == SERVER_MODE:
             self.start_server()
@@ -99,9 +102,23 @@ class MainWindow(QMainWindow):
         self.connect_to_server()
 
     def _show_notification(self, title, body):
-        from notification_widget import NotificationDialog
-        self.notification_widget = NotificationDialog(self, title=title, body=body)
-        self.notification_widget.exec_()
+        self._notifications_queue.append((title, body))
+        if len(self._notifications_queue) > 1:
+            if self.notification_widget:
+                self.notification_widget.remaining_notifications += 1
+                self.notification_widget.notifications_count_updated.emit()
+            return
+        self._next_notification()
+
+    def _next_notification(self):
+        while len(self._notifications_queue) > 0:
+            title, body = self._notifications_queue[0]
+            self.notification_widget = NotificationDialog(self, title, body, len(self._notifications_queue) - 1,
+                                                          self._notifications_passed)
+            self._notifications_passed += 1
+            self.notification_widget.exec_()
+            self._notifications_queue.pop(0)
+        self._notifications_passed = 0
 
     def stop_server(self):
         self.disconnect_client()
