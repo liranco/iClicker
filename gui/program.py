@@ -64,8 +64,11 @@ class MainWindow(QMainWindow):
         self.active_server_threads = []
         self.settings_dialog = None
         self.client = None
+        self._auto_clicker_interval = None
+        self._auto_clicker_seconds_left_for_interval = None
         self._connect_to_server_thread = None  # type: ConnectToServerThread
         self._client_connection_check_timer = None
+        self._update_auto_clicker_interval_timer = None
         self.notification_widget = None  # type: NotificationDialog
         self._notifications_queue = []
         self._notifications_passed = 0
@@ -164,10 +167,16 @@ class MainWindow(QMainWindow):
 
     def connect_to_server_finished(self):
         self.client = self._connect_to_server_thread.client
+        server_options = self._connect_to_server_thread.server_info
+        self._auto_clicker_interval = server_options.get('auto_clicker_interval')
+        self._auto_clicker_seconds_left_for_interval = server_options.get('auto_clicker_seconds_left_for_interval')
         del self._connect_to_server_thread
         self._connect_to_server_thread = None
         if not self._client_connection_check_timer:
             self._client_connection_check_timer = self.startTimer(5000)
+        if not self._update_auto_clicker_interval_timer:
+            self._update_auto_clicker_interval_timer = self.startTimer(1000)
+        print server_options
 
     def status_updated(self, status):
         (status_text, status_color), args = status
@@ -188,6 +197,13 @@ class MainWindow(QMainWindow):
     def timerEvent(self, event):
         if event.timerId() == self._client_connection_check_timer:
             self.connect_to_server()
+        if event.timerId() == self._update_auto_clicker_interval_timer:
+            if self._auto_clicker_interval is None:
+                return
+            self._auto_clicker_seconds_left_for_interval -= 1
+            print '>>> {}'.format(self._auto_clicker_seconds_left_for_interval)
+            if self._auto_clicker_seconds_left_for_interval == 0:
+                self._auto_clicker_seconds_left_for_interval = self._auto_clicker_interval
 
 
 def main():
@@ -203,6 +219,7 @@ class ConnectToServerThread(QThread):
 
     def __init__(self, parent, client=None):
         self.client = client
+        self.server_info = None
         assert isinstance(parent, MainWindow)
         super(ConnectToServerThread, self).__init__(parent)
 
@@ -222,7 +239,7 @@ class ConnectToServerThread(QThread):
             client = self.client
         self.status_updated.emit((STATUS_CLIENT_CONNECTING, client.server_name))
         try:
-            client.connect()
+            server_info = client.connect()
         except BadPasswordException:
             self.status_updated.emit((STATUS_CLIENT_BAD_PASSWORD, client.server_name))
         except error as e:
@@ -234,4 +251,5 @@ class ConnectToServerThread(QThread):
             client.close()
         else:
             self.client = client
+            self.server_info = server_info
             self.status_updated.emit((STATUS_CLIENT_CONNECTED, client.server_name))

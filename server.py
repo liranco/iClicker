@@ -30,7 +30,6 @@ class BaseServerHandler(StreamRequestHandler):
     def _post(self, code, **kwargs):
         kwargs['code'] = code
         kwargs['name'] = self.server.server_name
-        kwargs.update(self.get_constantly_added_info())
         self.wfile.write(json.dumps(kwargs))
 
     def _get(self):
@@ -65,7 +64,9 @@ class BaseServerHandler(StreamRequestHandler):
         # Call the relevant handler
         handlers = {CODE_START_COMM: lambda **_: None}
         handlers.update(self.handlers())
-        handlers[code](**data)
+        response = handlers[code](**data)
+        response = response or {}  # type: dict
+        self._post(CODE_SERVER_RESPONSE, **response)
 
     def _challenge_sequence(self):
         # Start authentication
@@ -87,10 +88,6 @@ class BaseServerHandler(StreamRequestHandler):
         else:
             return True
 
-    # noinspection PyMethodMayBeStatic
-    def get_constantly_added_info(self):
-        return {}
-
 
 class MainServerHandler(BaseServerHandler):
     def handlers(self):
@@ -99,6 +96,7 @@ class MainServerHandler(BaseServerHandler):
             CODE_ACCEPT_NOTIFICATIONS: self.handle_accept_notifications,
             CODE_CLICK: self.handle_click,
             CODE_SET_AUTO_CLICKER: self.handle_set_auto_clicker,
+            CODE_GET_SERVER_INFO: self.get_server_info
         }
 
     def handle_say_hello(self, name, **_):
@@ -116,15 +114,20 @@ class MainServerHandler(BaseServerHandler):
         self.server.updates_method('Click!', '{} has sent a click command'.format(name))
 
     def handle_set_auto_clicker(self, name, interval, **_):
+        assert isinstance(interval, (int, type(None)))
+        if isinstance(interval, int) and interval < 1:
+            interval = 1
         self.server.set_auto_clicker(interval)
         self.server.updates_method('Auto Clicker set!', "{} has set the auto clicker's interval to {} minutes"
                                    .format(name, interval))
 
-    def get_constantly_added_info(self):
+    def get_server_info(self, **_):
         from time import time
         return dict(
             server_time=time(),
-            auto_clicker_interval=self.server.auto_clicker_interval
+            auto_clicker_interval=self.server.auto_clicker_interval,
+            auto_clicker_seconds_left_for_interval=self.server.auto_clicker_thread.seconds_left_for_interval
+            if self.server.auto_clicker_thread else None
         )
 
 
@@ -143,6 +146,8 @@ class MainServer(ThreadingTCPServer):
         print '{}: {}'.format(title, message)
 
     def set_auto_clicker(self, interval):
+        assert isinstance(interval, (int, type(None)))
+        self.auto_clicker_interval = interval
         if self.auto_clicker_thread:
             self.auto_clicker_thread.stop_event.set()
         if interval is not None:

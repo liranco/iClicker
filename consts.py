@@ -23,6 +23,7 @@ CODE_CHALLENGE_FAILED = _code_counter.next()
 CODE_CHALLENGE_SUCCESS = _code_counter.next()
 # instruction codes
 CODE_SAY_HELLO = _code_counter.next()
+CODE_GET_SERVER_INFO = _code_counter.next()
 CODE_ACCEPT_NOTIFICATIONS = _code_counter.next()
 CODE_CLICK = _code_counter.next()
 CODE_SET_AUTO_CLICKER = _code_counter.next()
