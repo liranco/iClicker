@@ -22,6 +22,9 @@ def get_status_formatted(status, *args):
 
 class Menu(QMenu):
     def __init__(self, parent):
+        """
+        :type parent: MainWindow
+        """
         super(Menu, self).__init__("Mazgan Clicker", parent=parent)
         self.text, self.color = (None, None)
         self.status_label = QLabel(' ' * 20)
@@ -30,7 +33,11 @@ class Menu(QMenu):
         self.addAction(status_label_action)
         self.addSeparator()
         dance_action = self.addAction('Dance')
+        click_action = self.addAction('Click')
+        auto_click_action = self.addAction('Auto Click')
         dance_action.triggered.connect(lambda: parent.client.dance())
+        click_action.triggered.connect(lambda: parent.client.click())
+        auto_click_action.triggered.connect(parent.show_auto_click)
         self.addSeparator()
         settings_action = self.addAction('Settings')
         settings_action.triggered.connect(parent.show_settings)
@@ -85,6 +92,15 @@ class MainWindow(QMainWindow):
                 self.stop_server()
                 self.connect_to_server()
 
+    def show_auto_click(self):
+        print 'Auto Click'
+        interval, accepted = QInputDialog().getInt(self,
+                                                   'Set Auto Clicker Interval',
+                                                   'Please enter interval (in minutes):',
+                                                   10, 1)
+        if accepted:
+            self.client.set_auto_clicker(interval)
+
     def start_server(self):
         from client import Client
         self.disconnect_client()
@@ -97,7 +113,7 @@ class MainWindow(QMainWindow):
         self.tray_menu.status_label.setText('Hello')
         self.client = Client('127.0.0.1', ServerSettings().server_port,
                              ServerSettings().server_password,
-                             client_name='Localhost',
+                             client_name=ServerSettings().server_name,
                              is_password_hashed=True)
         self.connect_to_server()
 

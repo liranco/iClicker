@@ -116,6 +116,12 @@ class Client(object):
         self.send_receive(CODE_SAY_HELLO)
         self.send(CODE_ACCEPT_NOTIFICATIONS)
 
+    def click(self):
+        self.send_receive(CODE_CLICK)
+
+    def set_auto_clicker(self, interval):
+        self.send_receive(CODE_SET_AUTO_CLICKER, interval=interval)
+
     def close(self):
         self.socket.close()
 

@@ -91,7 +91,9 @@ class MainServerHandler(BaseServerHandler):
     def handlers(self):
         return {
             CODE_SAY_HELLO: self.handle_say_hello,
-            CODE_ACCEPT_NOTIFICATIONS: self.handle_accept_notifications
+            CODE_ACCEPT_NOTIFICATIONS: self.handle_accept_notifications,
+            CODE_CLICK: self.handle_click,
+            CODE_SET_AUTO_CLICKER: self.handle_set_auto_clicker,
         }
 
     def handle_say_hello(self, name, **_):
@@ -103,6 +105,14 @@ class MainServerHandler(BaseServerHandler):
         self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
         self.server.updates_method('Connected Servers', '\r\n'.join(self.server.clients))
 
+    def handle_click(self, name, **_):
+        print _
+        self.server.updates_method('Click!', '{} has sent a click command'.format(name))
+
+    def handle_set_auto_clicker(self, name, interval, **_):
+        self.server.updates_method('Auto Clicker set!', "{} has set the auto clicker's interval to {} minutes"
+                                   .format(name, interval))
+
 
 class MainServer(ThreadingTCPServer):
     def __init__(self, server_name, server_address, updates_method=None):
@@ -110,7 +120,11 @@ class MainServer(ThreadingTCPServer):
         self.clients = {}
         self.server_name = server_name
         self.timeout = 5
-        self.updates_method = updates_method
+        self.updates_method = updates_method or self._auto_updates_method
+
+    @staticmethod
+    def _auto_updates_method(title, message):
+        print '{}: {}'.format(title, message)
 
 
 def answer_search_requests(threaded=True):
