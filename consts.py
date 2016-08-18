@@ -10,23 +10,23 @@ DEFAULT_SERVER_PORT = 9191
 
 
 # ### Communications Codes ### #
-_code_counter = _count(1)
+_next = _count(1).next
 # basic codes
-CODE_FIND_SERVER = _code_counter.next()
-CODE_START_COMM = _code_counter.next()
-CODE_SERVER_RESPONSE = _code_counter.next()
+CODE_FIND_SERVER = _next()
+CODE_START_COMM = _next()
+CODE_SERVER_RESPONSE = _next()
 # challenge-response codes
-CODE_CHALLENGE_START = _code_counter.next()
-CODE_CHALLENGE_NOT_REQUIRED = _code_counter.next()
-CODE_CHALLENGE_RESPONSE = _code_counter.next()
-CODE_CHALLENGE_FAILED = _code_counter.next()
-CODE_CHALLENGE_SUCCESS = _code_counter.next()
+CODE_CHALLENGE_START = _next()
+CODE_CHALLENGE_NOT_REQUIRED = _next()
+CODE_CHALLENGE_RESPONSE = _next()
+CODE_CHALLENGE_FAILED = _next()
+CODE_CHALLENGE_SUCCESS = _next()
 # instruction codes
-CODE_SAY_HELLO = _code_counter.next()
-CODE_GET_SERVER_INFO = _code_counter.next()
-CODE_ACCEPT_NOTIFICATIONS = _code_counter.next()
-CODE_CLICK = _code_counter.next()
-CODE_SET_AUTO_CLICKER = _code_counter.next()
+CODE_SAY_HELLO = _next()
+CODE_GET_SERVER_INFO = _next()
+CODE_ACCEPT_NOTIFICATIONS = _next()
+CODE_CLICK = _next()
+CODE_SET_AUTO_CLICKER = _next()
 
 # Server Settings
 FIND_SERVER_TIMEOUT = 5  # 5 Seconds
