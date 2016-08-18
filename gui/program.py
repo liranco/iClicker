@@ -156,6 +156,10 @@ class MainWindow(QMainWindow):
         if self._client_connection_check_timer:
             self.killTimer(self._client_connection_check_timer)
             self._client_connection_check_timer = None
+        if self._connect_to_server_thread:
+            self._connect_to_server_thread.status_updated.disconnect(self.status_updated)
+            self._connect_to_server_thread.exit()
+            self._connect_to_server_thread = None
 
     def connect_to_server(self):
         if self._connect_to_server_thread is None:
@@ -167,16 +171,17 @@ class MainWindow(QMainWindow):
 
     def connect_to_server_finished(self):
         self.client = self._connect_to_server_thread.client
-        server_options = self._connect_to_server_thread.server_info
-        self._auto_clicker_interval = server_options.get('auto_clicker_interval')
-        self._auto_clicker_seconds_left_for_interval = server_options.get('auto_clicker_seconds_left_for_interval')
+        server_info = self._connect_to_server_thread.server_info
+        if server_info:
+            self._auto_clicker_interval = server_info.get('auto_clicker_interval')
+            self._auto_clicker_seconds_left_for_interval = server_info.get('auto_clicker_seconds_left_for_interval')
         del self._connect_to_server_thread
         self._connect_to_server_thread = None
         if not self._client_connection_check_timer:
             self._client_connection_check_timer = self.startTimer(5000)
         if not self._update_auto_clicker_interval_timer:
             self._update_auto_clicker_interval_timer = self.startTimer(1000)
-        print server_options
+        print server_info
 
     def status_updated(self, status):
         (status_text, status_color), args = status
@@ -247,7 +252,7 @@ class ConnectToServerThread(QThread):
                 self.status_updated.emit((STATUS_CLIENT_OFFLINE, client.server_name))
             else:
                 self.status_updated.emit((STATUS_CLIENT_ERROR, e.errno, client.server_name))
-            print e
+            print 'Error connecting to {}: {}'.format(client.server_address, e)
             client.close()
         else:
             self.client = client
