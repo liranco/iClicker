@@ -21,6 +21,8 @@ def get_status_formatted(status, *args):
 
 
 class Menu(QMenu):
+    AUTO_CLICK_TEXT = 'Auto Click ({})'
+
     def __init__(self, parent):
         """
         :type parent: MainWindow
@@ -34,10 +36,11 @@ class Menu(QMenu):
         self.addSeparator()
         dance_action = self.addAction('Dance')
         click_action = self.addAction('Click')
-        auto_click_action = self.addAction('Auto Click')
+        self.auto_click_action = self.addAction('')
+        self.set_auto_click_text(None)
         dance_action.triggered.connect(lambda: parent.client.dance())
         click_action.triggered.connect(lambda: parent.client.click())
-        auto_click_action.triggered.connect(parent.show_auto_click)
+        self.auto_click_action.triggered.connect(parent.show_auto_click)
         self.addSeparator()
         settings_action = self.addAction('Settings')
         settings_action.triggered.connect(parent.show_settings)
@@ -51,6 +54,18 @@ class Menu(QMenu):
         self.status_label.setPalette(palette)
         self.status_label.setText(text)
         self.status_label.setToolTip(text)
+
+    def set_auto_click_text(self, seconds):
+        if seconds is None:
+            self.auto_click_action.setText(self.AUTO_CLICK_TEXT.format('Disabled'))
+        else:
+            if seconds >= 60 * 60:
+                value = seconds / (60.0 * 60.0), 'hours'
+            elif seconds >= 60:
+                value = seconds / 60.0, 'minutes'
+            else:
+                value = seconds, 'seconds'
+            self.auto_click_action.setText(self.AUTO_CLICK_TEXT.format('%s %s' % value))
 
 
 class MainWindow(QMainWindow):
@@ -99,8 +114,8 @@ class MainWindow(QMainWindow):
         print 'Auto Click'
         interval, accepted = QInputDialog().getInt(self,
                                                    'Set Auto Clicker Interval',
-                                                   'Please enter interval (in minutes):',
-                                                   self._auto_clicker_interval or 10, 1)
+                                                   'Please enter interval in minutes, enter 0 to disable:',
+                                                   self._auto_clicker_interval or 10, 0)
         if accepted:
             self.client.set_auto_clicker(interval)
 
@@ -202,13 +217,16 @@ class MainWindow(QMainWindow):
     def timerEvent(self, event):
         if event.timerId() == self._client_connection_check_timer:
             self.connect_to_server()
-        if event.timerId() == self._update_auto_clicker_interval_timer:
+        elif event.timerId() == self._update_auto_clicker_interval_timer:
             if self._auto_clicker_interval is None:
+                self.tray_menu.set_auto_click_text(None)
                 return
             self._auto_clicker_seconds_left_for_interval -= 1
             print '>>> {}'.format(self._auto_clicker_seconds_left_for_interval)
+            self.tray_menu.set_auto_click_text(self._auto_clicker_seconds_left_for_interval)
             if self._auto_clicker_seconds_left_for_interval == 0:
                 self._auto_clicker_seconds_left_for_interval = self._auto_clicker_interval
+                self.killTimer(self._update_auto_clicker_interval_timer)
 
 
 def main():

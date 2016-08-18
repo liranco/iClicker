@@ -115,11 +115,14 @@ class MainServerHandler(BaseServerHandler):
 
     def handle_set_auto_clicker(self, name, interval, **_):
         assert isinstance(interval, (int, type(None)))
-        if isinstance(interval, int) and interval < 1:
-            interval = 1
+        if isinstance(interval, int) and interval <= 0:
+            interval = None
         self.server.set_auto_clicker(interval)
-        self.server.updates_method('Auto Clicker set!', "{} has set the auto clicker's interval to {} minutes"
-                                   .format(name, interval))
+        if interval:
+            self.server.updates_method('Auto Clicker set!', "{} has set the auto clicker's interval to {} minutes"
+                                       .format(name, interval))
+        else:
+            self.server.updates_method('Auto Clicker disabled!', "{} has disabled the auto clicker".format(name))
 
     def get_server_info(self, **_):
         from time import time
