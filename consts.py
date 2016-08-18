@@ -1,3 +1,5 @@
+from itertools import count as _count
+
 # General settings
 SERVER_MODE = 'Server'
 CLIENT_MODE = 'Client'
@@ -8,16 +10,17 @@ DEFAULT_SERVER_PORT = 9191
 
 
 # Communications Codes
-CODE_FIND_SERVER = 1
-CODE_START_COMM = 2
-CODE_CHALLENGE_START = 3
-CODE_CHALLENGE_NOT_REQUIRED = 4
-CODE_CHALLENGE_RESPONSE = 5
-CODE_CHALLENGE_FAILED = 6
-CODE_CHALLENGE_SUCCESS = 7
-CODE_SAY_HELLO = 8
-CODE_ACCEPT_NOTIFICATIONS = 9
-CODE_SERVER_RESPONSE = 10
+_code_counter = _count(1)
+CODE_FIND_SERVER = _code_counter.next()
+CODE_START_COMM = _code_counter.next()
+CODE_SERVER_RESPONSE = _code_counter.next()
+CODE_CHALLENGE_START = _code_counter.next()
+CODE_CHALLENGE_NOT_REQUIRED = _code_counter.next()
+CODE_CHALLENGE_RESPONSE = _code_counter.next()
+CODE_CHALLENGE_FAILED = _code_counter.next()
+CODE_CHALLENGE_SUCCESS = _code_counter.next()
+CODE_SAY_HELLO = _code_counter.next()
+CODE_ACCEPT_NOTIFICATIONS = _code_counter.next()
 
 # Server Settings
 FIND_SERVER_TIMEOUT = 5  # 5 Seconds
