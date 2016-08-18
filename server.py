@@ -105,8 +105,8 @@ class MainServerHandler(BaseServerHandler):
 
 
 class MainServer(ThreadingTCPServer):
-    def __init__(self, server_name, server_address, updates_method=None):
-        ThreadingTCPServer.__init__(self, server_address, MainServerHandler)
+    def __init__(self, server_name, server_address, updates_method=None, handler=MainServerHandler):
+        ThreadingTCPServer.__init__(self, server_address, handler)
         self.clients = {}
         self.server_name = server_name
         self.timeout = 5
@@ -119,23 +119,21 @@ def answer_search_requests(threaded=True):
     except socket.error as error:
         print error
         return None, None
-    if threaded:
-        server_thread = Thread(target=server.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
-        return server_thread, server
-    else:
-        server.serve_forever()
+    return _init_server(server, threaded)
 
 
-def run_server(threaded=True, updates_method=None):
+def run_server(threaded=True, updates_method=None, handler=MainServerHandler):
     try:
         settings = ServerSettings()
         server = MainServer(settings.server_name, ('0.0.0.0', settings.server_port),
-                            updates_method)
+                            updates_method, handler)
     except socket.error as error:
         print error
         return None, None
+    return _init_server(server, threaded)
+
+
+def _init_server(server, threaded=True):
     if threaded:
         server_thread = Thread(target=server.serve_forever)
         server_thread.daemon = True

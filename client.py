@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+from server import BaseServerHandler, _init_server, ThreadingTCPServer
 from settings import ClientSettings
 from consts import *
 from time import time
@@ -118,6 +119,25 @@ class Client(object):
 
     def close(self):
         self.socket.close()
+
+
+class ClientNotificationsHandler(BaseServerHandler):
+    def handlers(self):
+        return {
+            CODE_MANUAL_ACTION: self.handle_show_notification
+        }
+
+    def handle_show_notification(self, name, **_):
+        print 'This is awesome', name, _
+
+
+def run_client_notifications_receiver(threaded=True):
+    try:
+        server = ThreadingTCPServer(('0.0.0.0', 1919), ClientNotificationsHandler)
+    except socket.error as error:
+        print error
+        return None, None
+    return _init_server(server, threaded)
 
 
 if __name__ == '__main__':
