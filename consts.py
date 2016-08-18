@@ -25,9 +25,11 @@ CODE_CHALLENGE_SUCCESS = _next()
 # instruction codes
 CODE_SAY_HELLO = _next()
 CODE_GET_SERVER_INFO = _next()
-CODE_SHOW_NOTIFICATION = _next()
 CODE_CLICK = _next()
 CODE_SET_AUTO_CLICKER = _next()
+# Events codes
+CODE_SHOW_NOTIFICATION = _next()
+CODE_CLICK_HAPPENED = _next()
 
 # Server Settings
 FIND_SERVER_TIMEOUT = 5  # 5 Seconds

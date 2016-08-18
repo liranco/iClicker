@@ -118,7 +118,7 @@ class MainServerHandler(BaseServerHandler):
 
     def handle_click(self, name, **_):
         self.server.click()
-        self.server.push('Click!', '{} has sent a click command'.format(name))
+        self.server.push(CODE_SHOW_NOTIFICATION, title='Click!', message='{} has sent a click command'.format(name))
 
     def handle_set_auto_clicker(self, name, interval, **_):
         assert isinstance(interval, (int, type(None)))
@@ -126,10 +126,11 @@ class MainServerHandler(BaseServerHandler):
             interval = None
         self.server.set_auto_clicker(interval)
         if interval:
-            self.server.updates_method('Auto Clicker set!', "{} has set the auto clicker's interval to {} minutes"
-                                       .format(name, interval))
+            self.server.push(CODE_SHOW_NOTIFICATION, title='Auto Clicker set!',
+                             message="{} has set the auto clicker's interval to {} minutes".format(name, interval))
         else:
-            self.server.updates_method('Auto Clicker disabled!', "{} has disabled the auto clicker".format(name))
+            self.server.push(CODE_SHOW_NOTIFICATION, title='Auto Clicker disabled!',
+                             message="{} has disabled the auto clicker".format(name))
 
     def get_server_info(self, **_):
         from time import time
@@ -142,17 +143,9 @@ class MainServerHandler(BaseServerHandler):
 
 
 class Server(ThreadingTCPServer):
-    def __init__(self, name, server_address, updates_method=None, handler=None):
+    def __init__(self, name, server_address, handler=None):
         ThreadingTCPServer.__init__(self, server_address, handler)
         self.name = name
-        self.timeout = 5
-        self.updates_method = updates_method or self._default_updates_method
-        self.auto_clicker_interval = None
-        self.auto_clicker_thread = None  # type: AutoClicker
-
-    @staticmethod
-    def _default_updates_method(title, message):
-        print '{}: {}'.format(title, message)
 
 
 class MainServer(Server):
@@ -163,17 +156,16 @@ class MainServer(Server):
         self.auto_clicker_interval = None
         self.auto_clicker_thread = None  # type: AutoClicker
 
-    def push(self, title, body):
+    def push(self, code, **kwargs):
         from client import Client
         from datetime import datetime
         for client_ip, (client_port, registration_time) in self.clients.items():
             if (datetime.now() - datetime.fromtimestamp(registration_time)).total_seconds() > SESSION_TIMEOUT:
                 self.clients.pop(client_ip)
                 continue
-            print client_ip, (client_port, registration_time)
             client = Client(client_ip, client_port, password=ServerSettings().server_password, is_password_hashed=True,
                             client_name=self.name)
-            client.send(CODE_SHOW_NOTIFICATION, title=title, body=body)
+            client.send(code, **kwargs)
 
     def set_auto_clicker(self, interval):
         assert isinstance(interval, (int, type(None)))
@@ -181,12 +173,13 @@ class MainServer(Server):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.stop_event.set()
         if interval is not None:
-            self.auto_clicker_thread = AutoClicker(interval)
+            self.auto_clicker_thread = AutoClicker(interval, self.click)
             self.auto_clicker_thread.start()
 
     def click(self):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
+        self.push(CODE_CLICK_HAPPENED)
 
     def server_close(self):
         if self.auto_clicker_thread:
@@ -224,7 +217,7 @@ def _init_server(server, threaded=True):
 
 
 class AutoClicker(Thread):
-    def __init__(self, interval_in_minutes):
+    def __init__(self, interval_in_minutes, method):
         super(AutoClicker, self).__init__()
         interval_in_minutes = int(interval_in_minutes)
         if interval_in_minutes < 1:
@@ -232,6 +225,7 @@ class AutoClicker(Thread):
         self.stop_event = Event()
         self.interval = interval_in_minutes
         self.seconds_left_for_interval = self.interval - 1
+        self.method = method
 
     def run(self):
         while not self.stop_event.wait(1):
@@ -239,6 +233,7 @@ class AutoClicker(Thread):
                 self.seconds_left_for_interval -= 1
             else:
                 self.seconds_left_for_interval = self.interval - 1
+                self.method()
 
 
 if __name__ == '__main__':

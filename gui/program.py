@@ -70,6 +70,7 @@ class Menu(QMenu):
 
 class MainWindow(QMainWindow):
     update_notifications_signal = Signal(tuple)
+    click_occurred_signal = Signal()
 
     def __init__(self, parent=None, flags=0):
         super(MainWindow, self).__init__(parent, flags)
@@ -89,6 +90,7 @@ class MainWindow(QMainWindow):
         self._notifications_queue = []
         self._notifications_passed = 0
         self.update_notifications_signal.connect(lambda message: self._show_notification(*message))
+        self.click_occurred_signal.connect(lambda: self.click_occurred_signal_receiver())
         if self.settings.mode == SERVER_MODE:
             self.start_server()
         else:
@@ -133,8 +135,8 @@ class MainWindow(QMainWindow):
                              is_password_hashed=True)
         self.connect_to_server()
 
-    def _show_notification(self, title, body):
-        self._notifications_queue.append((title, body))
+    def _show_notification(self, title, message):
+        self._notifications_queue.append((title, message))
         if len(self._notifications_queue) > 1:
             if self.notification_widget:
                 self.notification_widget.remaining_notifications += 1
@@ -144,8 +146,8 @@ class MainWindow(QMainWindow):
 
     def _next_notification(self):
         while len(self._notifications_queue) > 0:
-            title, body = self._notifications_queue[0]
-            self.notification_widget = NotificationDialog(self, title, body, len(self._notifications_queue) - 1,
+            title, message = self._notifications_queue[0]
+            self.notification_widget = NotificationDialog(self, title, message, len(self._notifications_queue) - 1,
                                                           self._notifications_passed)
             self._notifications_passed += 1
             self.notification_widget.exec_()
@@ -181,7 +183,9 @@ class MainWindow(QMainWindow):
         from client import run_client_notifications_receiver
         if self.client_receiver is None:
             self.client_receiver = run_client_notifications_receiver(
-                updates_method=lambda title, body: self.update_notifications_signal.emit((title, body)))
+                handlers={CODE_SHOW_NOTIFICATION: self.handle_show_notification,
+                          CODE_CLICK_HAPPENED: self.handle_click_happened}
+            )
         if self._connect_to_server_thread is None:
             thread = ConnectToServerThread(self, client=self.client)
             thread.status_updated.connect(self.status_updated)
@@ -201,6 +205,21 @@ class MainWindow(QMainWindow):
             self._client_connection_check_timer = self.startTimer(5000)
         if not self._update_auto_clicker_interval_timer:
             self._update_auto_clicker_interval_timer = self.startTimer(1000)
+
+    def handle_show_notification(self, title, message, **_):
+        self.update_notifications_signal.emit((title, message))
+
+    def handle_click_happened(self, **_):
+        self.click_occurred_signal.emit()
+
+    def click_occurred_signal_receiver(self):
+        server_info = self.client.server_info()
+        if server_info:
+            self._auto_clicker_interval = server_info.get('auto_clicker_interval')
+            self._auto_clicker_seconds_left_for_interval = server_info.get('auto_clicker_seconds_left_for_interval')
+        print server_info
+        self._auto_clicker_seconds_left_for_interval = self._auto_clicker_interval
+        self._update_auto_clicker_interval_timer = self.startTimer(1000)
 
     def status_updated(self, status):
         (status_text, status_color), args = status

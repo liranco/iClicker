@@ -133,20 +133,14 @@ class Client(object):
         self.socket.close()
 
 
-class ClientNotificationsHandler(BaseServerHandler):
-    def handlers(self):
-        return {
-            CODE_SHOW_NOTIFICATION: self.handle_show_notification
-        }
+def run_client_notifications_receiver(threaded=True, handlers=None):
+    class ClientUpdatesHandler(BaseServerHandler):
+        def handlers(self):
+            return handlers or {}
 
-    def handle_show_notification(self, title, body, **_):
-        self.server.updates_method(title, body)
-
-
-def run_client_notifications_receiver(threaded=True, updates_method=None):
     try:
         server = Server(ClientSettings().client_name,
-                        ('0.0.0.0', CLIENT_LISTENER_PORT), updates_method, ClientNotificationsHandler)
+                        ('0.0.0.0', CLIENT_LISTENER_PORT), handler=ClientUpdatesHandler)
     except error as err:
         print err
         return None
