@@ -154,6 +154,11 @@ class MainServer(ThreadingTCPServer):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
 
+    def server_close(self):
+        if self.auto_clicker_thread:
+            self.auto_clicker_thread.stop_event.set()
+            self.auto_clicker_thread.join()
+
 
 def answer_search_requests(threaded=True):
     try:
