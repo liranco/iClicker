@@ -31,7 +31,7 @@ CODE_SET_AUTO_CLICKER = _next()
 
 # Server Settings
 FIND_SERVER_TIMEOUT = 5  # 5 Seconds
-SESSION_TIMEOUT = 5     # 20 Seconds
+SESSION_TIMEOUT = 20     # 20 Seconds
 
 
 if __name__ == '__main__':

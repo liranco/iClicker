@@ -99,9 +99,19 @@ class MainServerHandler(BaseServerHandler):
             CODE_GET_SERVER_INFO: self.get_server_info
         }
 
+    def _extend_client_timeout(self):
+        client_port, old_update_time = self.server.clients[self.client_address[0]]
+        self.server.clients[self.client_address[0]] = (client_port, time.time())
+
+    def handle(self):
+        if self.client_address[0] in self.server.clients:
+            self._extend_client_timeout()
+        BaseServerHandler.handle(self)
+
     def handle_start_comm(self, notifications_server_port=None, **_):
         if notifications_server_port:
-            self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
+            self.server.clients[self.client_address[0]] = (notifications_server_port, None)
+            self._extend_client_timeout()
 
     def handle_say_hello(self, **_):
         return dict(message='Hello from {}'.format(ServerSettings().server_name))
@@ -155,8 +165,13 @@ class MainServer(Server):
 
     def push(self, title, body):
         from client import Client
-        for client_ip, (client_port, registration_time) in self.clients.iteritems():
-            client = Client(client_ip, 1991, password=ServerSettings().server_password, is_password_hashed=True,
+        from datetime import datetime
+        for client_ip, (client_port, registration_time) in self.clients.items():
+            if (datetime.now() - datetime.fromtimestamp(registration_time)).total_seconds() > SESSION_TIMEOUT:
+                self.clients.pop(client_ip)
+                continue
+            print client_ip, (client_port, registration_time)
+            client = Client(client_ip, client_port, password=ServerSettings().server_password, is_password_hashed=True,
                             client_name=self.name)
             client.send(CODE_SHOW_NOTIFICATION, title=title, body=body)
 
