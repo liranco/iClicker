@@ -1,6 +1,6 @@
 from consts import *
 from settings import ServerSettings
-from threading import Thread
+from threading import Thread, Event
 from SocketServer import *
 import socket
 import json
@@ -30,6 +30,7 @@ class BaseServerHandler(StreamRequestHandler):
     def _post(self, code, **kwargs):
         kwargs['code'] = code
         kwargs['name'] = self.server.server_name
+        kwargs.update(self.get_constantly_added_info())
         self.wfile.write(json.dumps(kwargs))
 
     def _get(self):
@@ -56,7 +57,7 @@ class BaseServerHandler(StreamRequestHandler):
         code, data = self._get()
         if code is None:
             return
-        if self.challenge_sequence():
+        if self._challenge_sequence():
             self._post(CODE_CHALLENGE_SUCCESS)
         else:
             self._post(CODE_CHALLENGE_FAILED)
@@ -66,7 +67,7 @@ class BaseServerHandler(StreamRequestHandler):
         handlers.update(self.handlers())
         handlers[code](**data)
 
-    def challenge_sequence(self):
+    def _challenge_sequence(self):
         # Start authentication
         password = ServerSettings().server_password
         if not password:
@@ -85,6 +86,10 @@ class BaseServerHandler(StreamRequestHandler):
             return False
         else:
             return True
+
+    # noinspection PyMethodMayBeStatic
+    def get_constantly_added_info(self):
+        return {}
 
 
 class MainServerHandler(BaseServerHandler):
@@ -107,11 +112,20 @@ class MainServerHandler(BaseServerHandler):
 
     def handle_click(self, name, **_):
         print _
+        self.server.click()
         self.server.updates_method('Click!', '{} has sent a click command'.format(name))
 
     def handle_set_auto_clicker(self, name, interval, **_):
+        self.server.set_auto_clicker(interval)
         self.server.updates_method('Auto Clicker set!', "{} has set the auto clicker's interval to {} minutes"
                                    .format(name, interval))
+
+    def get_constantly_added_info(self):
+        from time import time
+        return dict(
+            server_time=time(),
+            auto_clicker_interval=self.server.auto_clicker_interval
+        )
 
 
 class MainServer(ThreadingTCPServer):
@@ -121,10 +135,24 @@ class MainServer(ThreadingTCPServer):
         self.server_name = server_name
         self.timeout = 5
         self.updates_method = updates_method or self._auto_updates_method
+        self.auto_clicker_interval = None
+        self.auto_clicker_thread = None  # type: AutoClicker
 
     @staticmethod
     def _auto_updates_method(title, message):
         print '{}: {}'.format(title, message)
+
+    def set_auto_clicker(self, interval):
+        if self.auto_clicker_thread:
+            self.auto_clicker_thread.stop_event.set()
+        if interval is not None:
+            self.auto_clicker_thread = AutoClicker(interval)
+            self.auto_clicker_thread.start()
+
+    def click(self):
+        print 'Manual Click!'
+        if self.auto_clicker_thread:
+            self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
 
 
 def answer_search_requests(threaded=True):
@@ -157,6 +185,26 @@ def run_server(threaded=True, updates_method=None):
         return server_thread, server
     else:
         server.serve_forever()
+
+
+class AutoClicker(Thread):
+    def __init__(self, interval_in_minutes):
+        super(AutoClicker, self).__init__()
+        interval_in_minutes = int(interval_in_minutes)
+        if interval_in_minutes < 1:
+            interval_in_minutes = 1
+        self.stop_event = Event()
+        self.interval = interval_in_minutes
+        self.seconds_left_for_interval = self.interval - 1
+
+    def run(self):
+        while not self.stop_event.wait(1):
+            print self.seconds_left_for_interval
+            if self.seconds_left_for_interval > 0:
+                self.seconds_left_for_interval -= 1
+            else:
+                print 'Auto Click!'
+                self.seconds_left_for_interval = self.interval - 1
 
 
 if __name__ == '__main__':
