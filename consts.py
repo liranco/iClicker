@@ -7,6 +7,7 @@ CLIENT_MODE = 'Client'
 # Ports
 SERVER_BROADCAST_PORT = 1919
 DEFAULT_SERVER_PORT = 9191
+CLIENT_LISTENER_PORT = 1991
 
 
 # ### Communications Codes ### #

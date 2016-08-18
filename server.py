@@ -134,19 +134,27 @@ class MainServerHandler(BaseServerHandler):
         )
 
 
-class MainServer(ThreadingTCPServer):
-    def __init__(self, server_name, server_address, updates_method=None, handler=MainServerHandler):
+class Server(ThreadingTCPServer):
+    def __init__(self, server_address, updates_method=None, handler=None):
         ThreadingTCPServer.__init__(self, server_address, handler)
-        self.clients = {}
-        self.server_name = server_name
         self.timeout = 5
-        self.updates_method = updates_method or self._auto_updates_method
+        self.updates_method = updates_method or self._default_updates_method
         self.auto_clicker_interval = None
         self.auto_clicker_thread = None  # type: AutoClicker
 
     @staticmethod
-    def _auto_updates_method(title, message):
+    def _default_updates_method(title, message):
         print '{}: {}'.format(title, message)
+
+
+class MainServer(Server):
+    def __init__(self, server_name, server_address, updates_method=None):
+        Server.__init__(self, server_address, updates_method, handler=MainServerHandler)
+        self.clients = {}
+        self.server_name = server_name
+        self.timeout = 5
+        self.auto_clicker_interval = None
+        self.auto_clicker_thread = None  # type: AutoClicker
 
     def set_auto_clicker(self, interval):
         assert isinstance(interval, (int, type(None)))
@@ -173,18 +181,17 @@ def answer_search_requests(threaded=True):
         server = ThreadingUDPServer(('0.0.0.0', SERVER_BROADCAST_PORT), UDPBroadcastsHandler)
     except socket.error as error:
         print error
-        return None, None
+        return None
     return _init_server(server, threaded)
 
 
-def run_server(threaded=True, updates_method=None, handler=MainServerHandler):
+def run_server(threaded=True, updates_method=None):
     try:
         settings = ServerSettings()
-        server = MainServer(settings.server_name, ('0.0.0.0', settings.server_port),
-                            updates_method, handler)
+        server = MainServer(settings.server_name, ('0.0.0.0', settings.server_port), updates_method)
     except socket.error as error:
         print error
-        return None, None
+        return None
     return _init_server(server, threaded)
 
 
@@ -193,7 +200,7 @@ def _init_server(server, threaded=True):
         server_thread = Thread(target=server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
-        return server_thread, server
+        return server
     else:
         server.serve_forever()
 
