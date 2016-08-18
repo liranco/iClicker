@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
         self._auto_clicker_interval = None
         self._auto_clicker_seconds_left_for_interval = None
         self._connect_to_server_thread = None  # type: ConnectToServerThread
-        self._client_receiver = None
+        self.client_receiver = None
         self._client_connection_check_timer = None
         self._update_auto_clicker_interval_timer = None
         self.notification_widget = None  # type: NotificationDialog
@@ -125,9 +125,7 @@ class MainWindow(QMainWindow):
         self.stop_server()
         from server import answer_search_requests, run_server
         self.active_server_threads.extend((answer_search_requests(threaded=True),
-                                           run_server(threaded=True,
-                                                      updates_method=lambda title, body:
-                                                      self.update_notifications_signal.emit((title, body)))))
+                                           run_server(threaded=True)))
         self.tray_menu.status_label.setText('Hello')
         self.client = Client('127.0.0.1', ServerSettings().server_port,
                              ServerSettings().server_password,
@@ -167,6 +165,10 @@ class MainWindow(QMainWindow):
         if self.client:
             self.client.close()
             self.client = None
+        if self.client_receiver:
+            self.client_receiver.shutdown()
+            self.client_receiver.server_close()
+            self.client_receiver = None
         if self._client_connection_check_timer:
             self.killTimer(self._client_connection_check_timer)
             self._client_connection_check_timer = None
@@ -177,9 +179,10 @@ class MainWindow(QMainWindow):
 
     def connect_to_server(self):
         from client import run_client_notifications_receiver
-        if self._client_receiver is None:
-            self._client_receiver = run_client_notifications_receiver(
+        if self.client_receiver is None:
+            self.client_receiver = run_client_notifications_receiver(
                 updates_method=lambda title, body: self.update_notifications_signal.emit((title, body)))
+            self.client.notifications_server_port = self.client_receiver.server_address[1]
         if self._connect_to_server_thread is None:
             thread = ConnectToServerThread(self, client=self.client)
             thread.status_updated.connect(self.status_updated)
@@ -248,7 +251,9 @@ class ConnectToServerThread(QThread):
         super(ConnectToServerThread, self).__init__(parent)
 
     def parent(self):
-        # type: () -> MainWindow
+        """
+        :rtype: MainWindow
+        """
         return super(ConnectToServerThread, self).parent()
 
     def run(self):
@@ -258,7 +263,11 @@ class ConnectToServerThread(QThread):
             if ClientSettings().connected_server is None:
                 self.status_updated.emit((STATUS_CLIENT_NOT_SET, ))
                 return
-            client = Client()
+            if self.parent().client_receiver:
+                print self.parent().client_receiver.server_address[1]
+            else:
+                print 'Na'
+            client = Client(notifications_server_port=self.parent().client_receiver)
         else:
             client = self.client
         self.status_updated.emit((STATUS_CLIENT_CONNECTING, client.server_name))

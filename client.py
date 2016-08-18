@@ -53,7 +53,8 @@ class BadPasswordException(Exception):
 
 
 class Client(object):
-    def __init__(self, server_address=None, port=None, password=None, client_name=None, is_password_hashed=False):
+    def __init__(self, server_address=None, port=None, password=None, client_name=None, is_password_hashed=False,
+                 notifications_server_port=None):
         client_settings = ClientSettings()
         self.server_address = server_address or client_settings.connected_server[1]
         self.server_name = self.server_address
@@ -64,6 +65,7 @@ class Client(object):
             self.password = password if is_password_hashed else hashlib.sha1(password).hexdigest()
         else:
             self.password = client_settings.server_password
+        self.notifications_server_port = notifications_server_port
 
     def _connect(self):
         self.socket = socket(AF_INET, SOCK_STREAM)
@@ -78,6 +80,7 @@ class Client(object):
 
     def connect(self):
         self.send(CODE_START_COMM)
+        self.send_receive(CODE_SAY_HELLO, notifications_server_port=self.notifications_server_port)
         return self.send_receive(CODE_GET_SERVER_INFO)[1]
 
     def send(self, code, **kwargs):
@@ -105,7 +108,7 @@ class Client(object):
         if code is CODE_CHALLENGE_NOT_REQUIRED:
             response = None
         else:
-            assert code is CODE_CHALLENGE_START
+            assert code is CODE_CHALLENGE_START, code
             challenge = data['challenge']
             password = hashlib.sha1(self.password or '').hexdigest()
             response = hmac.new(str(challenge), str(password), hashlib.sha1).hexdigest()
@@ -117,13 +120,12 @@ class Client(object):
     def dance(self):
         self.send_receive(CODE_SAY_HELLO)
         print self.server_info()
-        self.send(CODE_ACCEPT_NOTIFICATIONS)
 
     def server_info(self):
         return self.send_receive(CODE_GET_SERVER_INFO)[1]
 
     def click(self):
-        print self.send_receive(CODE_CLICK)
+        self.send_receive(CODE_CLICK)
 
     def set_auto_clicker(self, interval):
         self.send_receive(CODE_SET_AUTO_CLICKER, interval=interval)
@@ -135,16 +137,17 @@ class Client(object):
 class ClientNotificationsHandler(BaseServerHandler):
     def handlers(self):
         return {
-            CODE_CLICK: self.handle_show_notification
+            CODE_SHOW_NOTIFICATION: self.handle_show_notification
         }
 
-    def handle_show_notification(self, name, **_):
-        print 'This is awesome', name, _
+    def handle_show_notification(self, title, body, **_):
+        self.server.updates_method(title, body)
 
 
 def run_client_notifications_receiver(threaded=True, updates_method=None):
     try:
-        server = Server(('0.0.0.0', CLIENT_LISTENER_PORT), updates_method, ClientNotificationsHandler)
+        server = Server(ClientSettings().client_name,
+                        ('0.0.0.0', CLIENT_LISTENER_PORT), updates_method, ClientNotificationsHandler)
     except error as err:
         print err
         return None

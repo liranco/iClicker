@@ -25,10 +25,19 @@ CODE_CHALLENGE_SUCCESS = _next()
 # instruction codes
 CODE_SAY_HELLO = _next()
 CODE_GET_SERVER_INFO = _next()
-CODE_ACCEPT_NOTIFICATIONS = _next()
+CODE_SHOW_NOTIFICATION = _next()
 CODE_CLICK = _next()
 CODE_SET_AUTO_CLICKER = _next()
 
 # Server Settings
 FIND_SERVER_TIMEOUT = 5  # 5 Seconds
 SESSION_TIMEOUT = 5     # 20 Seconds
+
+
+if __name__ == '__main__':
+    # Print all codes
+    print "\r\n".join(
+        map(lambda item: ": ".join((item[0], str(item[1]))),
+            sorted(
+                filter(lambda item: item[0].startswith('CODE_'),
+                       globals().iteritems()), key=lambda item: item[1])))

@@ -29,7 +29,7 @@ class BaseServerHandler(StreamRequestHandler):
 
     def _post(self, code, **kwargs):
         kwargs['code'] = code
-        kwargs['name'] = self.server.server_name
+        kwargs['name'] = self.server.name
         self.wfile.write(json.dumps(kwargs))
 
     def _get(self):
@@ -93,25 +93,19 @@ class MainServerHandler(BaseServerHandler):
     def handlers(self):
         return {
             CODE_SAY_HELLO: self.handle_say_hello,
-            CODE_ACCEPT_NOTIFICATIONS: self.handle_accept_notifications,
             CODE_CLICK: self.handle_click,
             CODE_SET_AUTO_CLICKER: self.handle_set_auto_clicker,
             CODE_GET_SERVER_INFO: self.get_server_info
         }
 
-    def handle_say_hello(self, name, **_):
+    def handle_say_hello(self, notifications_server_port=None, **_):
         self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(ServerSettings().server_name))
-        if self.server.updates_method:
-            self.server.updates_method('Say Hello!', 'HELLOOOOO from {}'.format(name))
-
-    def handle_accept_notifications(self, **_):
-        self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
-        self.server.updates_method('Connected Servers', '\r\n'.join(self.server.clients))
+        if notifications_server_port:
+            self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
 
     def handle_click(self, name, **_):
-        print _
         self.server.click()
-        self.server.updates_method('Click!', '{} has sent a click command'.format(name))
+        self.server.push('Click!', '{} has sent a click command'.format(name))
 
     def handle_set_auto_clicker(self, name, interval, **_):
         assert isinstance(interval, (int, type(None)))
@@ -135,8 +129,9 @@ class MainServerHandler(BaseServerHandler):
 
 
 class Server(ThreadingTCPServer):
-    def __init__(self, server_address, updates_method=None, handler=None):
+    def __init__(self, name, server_address, updates_method=None, handler=None):
         ThreadingTCPServer.__init__(self, server_address, handler)
+        self.name = name
         self.timeout = 5
         self.updates_method = updates_method or self._default_updates_method
         self.auto_clicker_interval = None
@@ -148,13 +143,20 @@ class Server(ThreadingTCPServer):
 
 
 class MainServer(Server):
-    def __init__(self, server_name, server_address, updates_method=None):
-        Server.__init__(self, server_address, updates_method, handler=MainServerHandler)
+    def __init__(self, server_name, server_address):
+        Server.__init__(self, server_name, server_address, handler=MainServerHandler)
         self.clients = {}
-        self.server_name = server_name
         self.timeout = 5
         self.auto_clicker_interval = None
         self.auto_clicker_thread = None  # type: AutoClicker
+
+    def push(self, title, body):
+        from client import Client
+        for client_ip, (client_port, registration_time) in self.clients.iteritems():
+            client = Client(client_ip, 1991, password=ServerSettings().server_password, is_password_hashed=True,
+                            client_name=self.name)
+            client.send(CODE_SHOW_NOTIFICATION, title=title, body=body)
+            print client_ip, client_port, registration_time
 
     def set_auto_clicker(self, interval):
         assert isinstance(interval, (int, type(None)))
@@ -166,7 +168,6 @@ class MainServer(Server):
             self.auto_clicker_thread.start()
 
     def click(self):
-        print 'Manual Click!'
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
 
@@ -185,10 +186,10 @@ def answer_search_requests(threaded=True):
     return _init_server(server, threaded)
 
 
-def run_server(threaded=True, updates_method=None):
+def run_server(threaded=True):
     try:
         settings = ServerSettings()
-        server = MainServer(settings.server_name, ('0.0.0.0', settings.server_port), updates_method)
+        server = MainServer(settings.server_name, ('0.0.0.0', settings.server_port))
     except socket.error as error:
         print error
         return None
@@ -217,11 +218,9 @@ class AutoClicker(Thread):
 
     def run(self):
         while not self.stop_event.wait(1):
-            print self.seconds_left_for_interval
             if self.seconds_left_for_interval > 0:
                 self.seconds_left_for_interval -= 1
             else:
-                print 'Auto Click!'
                 self.seconds_left_for_interval = self.interval - 1
 
 
