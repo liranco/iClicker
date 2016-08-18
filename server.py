@@ -163,9 +163,12 @@ class MainServer(Server):
             if (datetime.now() - datetime.fromtimestamp(registration_time)).total_seconds() > SESSION_TIMEOUT:
                 self.clients.pop(client_ip)
                 continue
-            client = Client(client_ip, client_port, password=ServerSettings().server_password, is_password_hashed=True,
-                            client_name=self.name)
-            client.send(code, **kwargs)
+            try:
+                client = Client(client_ip, client_port, password=ServerSettings().server_password,
+                                is_password_hashed=True, client_name=self.name)
+                client.send(code, **kwargs)
+            except:
+                pass
 
     def set_auto_clicker(self, interval):
         assert isinstance(interval, (int, type(None)))
