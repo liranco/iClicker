@@ -182,7 +182,6 @@ class MainWindow(QMainWindow):
         if self.client_receiver is None:
             self.client_receiver = run_client_notifications_receiver(
                 updates_method=lambda title, body: self.update_notifications_signal.emit((title, body)))
-            self.client.notifications_server_port = self.client_receiver.server_address[1]
         if self._connect_to_server_thread is None:
             thread = ConnectToServerThread(self, client=self.client)
             thread.status_updated.connect(self.status_updated)
@@ -263,13 +262,11 @@ class ConnectToServerThread(QThread):
             if ClientSettings().connected_server is None:
                 self.status_updated.emit((STATUS_CLIENT_NOT_SET, ))
                 return
-            if self.parent().client_receiver:
-                print self.parent().client_receiver.server_address[1]
-            else:
-                print 'Na'
-            client = Client(notifications_server_port=self.parent().client_receiver)
+            client = Client()
         else:
             client = self.client
+        if self.parent().client_receiver:
+            client.notifications_server_port = self.parent().client_receiver.server_address[1]
         self.status_updated.emit((STATUS_CLIENT_CONNECTING, client.server_name))
         try:
             server_info = client.connect()

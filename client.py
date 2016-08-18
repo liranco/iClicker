@@ -79,8 +79,7 @@ class Client(object):
         self._challenge()
 
     def connect(self):
-        self.send(CODE_START_COMM)
-        self.send_receive(CODE_SAY_HELLO, notifications_server_port=self.notifications_server_port)
+        self.send(CODE_START_COMM, notifications_server_port=self.notifications_server_port)
         return self.send_receive(CODE_GET_SERVER_INFO)[1]
 
     def send(self, code, **kwargs):

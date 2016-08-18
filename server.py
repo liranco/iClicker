@@ -92,16 +92,19 @@ class BaseServerHandler(StreamRequestHandler):
 class MainServerHandler(BaseServerHandler):
     def handlers(self):
         return {
+            CODE_START_COMM: self.handle_start_comm,
             CODE_SAY_HELLO: self.handle_say_hello,
             CODE_CLICK: self.handle_click,
             CODE_SET_AUTO_CLICKER: self.handle_set_auto_clicker,
             CODE_GET_SERVER_INFO: self.get_server_info
         }
 
-    def handle_say_hello(self, notifications_server_port=None, **_):
-        self._post(CODE_SERVER_RESPONSE, message='Hello from {}'.format(ServerSettings().server_name))
+    def handle_start_comm(self, notifications_server_port=None, **_):
         if notifications_server_port:
             self.server.clients[self.client_address[0]] = (self.client_address[1], time.time())
+
+    def handle_say_hello(self, **_):
+        return dict(message='Hello from {}'.format(ServerSettings().server_name))
 
     def handle_click(self, name, **_):
         self.server.click()
@@ -156,7 +159,6 @@ class MainServer(Server):
             client = Client(client_ip, 1991, password=ServerSettings().server_password, is_password_hashed=True,
                             client_name=self.name)
             client.send(CODE_SHOW_NOTIFICATION, title=title, body=body)
-            print client_ip, client_port, registration_time
 
     def set_auto_clicker(self, interval):
         assert isinstance(interval, (int, type(None)))
