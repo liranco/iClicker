@@ -78,6 +78,7 @@ class Client(object):
 
     def connect(self):
         self.send(CODE_START_COMM)
+        return self.send_receive(CODE_GET_SERVER_INFO)[1]
 
     def send(self, code, **kwargs):
         self._send(code, **kwargs)
@@ -115,7 +116,17 @@ class Client(object):
 
     def dance(self):
         self.send_receive(CODE_SAY_HELLO)
+        print self.server_info()
         self.send(CODE_ACCEPT_NOTIFICATIONS)
+
+    def server_info(self):
+        return self.send_receive(CODE_GET_SERVER_INFO)[1]
+
+    def click(self):
+        print self.send_receive(CODE_CLICK)
+
+    def set_auto_clicker(self, interval):
+        self.send_receive(CODE_SET_AUTO_CLICKER, interval=interval)
 
     def close(self):
         self.socket.close()

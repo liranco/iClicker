@@ -90,7 +90,7 @@ class NotificationDialog(QDialog):
         self.blur_animator.setEndValue(0)
         self.blur_animator.setDuration(300)
         self.opacity_animator.setStartValue(self.windowOpacity())
-        self.opacity_animator.setEndValue(0.7)
+        self.opacity_animator.setEndValue(1)
         self.opacity_animator.setDuration(400)
         self.opacity_animator.start()
         self.blur_animator.start()
@@ -112,7 +112,7 @@ class NotificationDialog(QDialog):
         if self.opacity_animator.state() == QPropertyAnimation.Running:
             self.opacity_animator.stop()
         self.opacity_animator.setStartValue(self.windowOpacity())
-        self.opacity_animator.setEndValue(1)
+        self.opacity_animator.setEndValue(0.2)
         self.opacity_animator.setDuration(200)
         self.opacity_animator.start()
         super(NotificationDialog, self).enterEvent(event)
@@ -121,7 +121,7 @@ class NotificationDialog(QDialog):
         if self.opacity_animator.state() == QPropertyAnimation.Running:
             self.opacity_animator.stop()
         self.opacity_animator.setStartValue(self.windowOpacity())
-        self.opacity_animator.setEndValue(0.7)
+        self.opacity_animator.setEndValue(1)
         self.opacity_animator.setDuration(200)
         self.opacity_animator.start()
         super(NotificationDialog, self).leaveEvent(event)
