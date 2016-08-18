@@ -65,12 +65,14 @@ class Menu(QMenu):
                 value = seconds / 60.0, 'minutes'
             else:
                 value = seconds, 'seconds'
-            self.auto_click_action.setText(self.AUTO_CLICK_TEXT.format('%s %s' % value))
+            value = round(value[0], 1), value[1]
+            self.auto_click_action.setText(self.AUTO_CLICK_TEXT.format('%.2g %s' % value))
 
 
 class MainWindow(QMainWindow):
     update_notifications_signal = Signal(tuple)
     click_occurred_signal = Signal()
+    auto_clicker_changed_signal = Signal()
 
     def __init__(self, parent=None, flags=0):
         super(MainWindow, self).__init__(parent, flags)
@@ -91,6 +93,7 @@ class MainWindow(QMainWindow):
         self._notifications_passed = 0
         self.update_notifications_signal.connect(lambda message: self._show_notification(*message))
         self.click_occurred_signal.connect(lambda: self.click_occurred_signal_receiver())
+        self.auto_clicker_changed_signal.connect(self.auto_clicker_changed_receiver)
         if self.settings.mode == SERVER_MODE:
             self.start_server()
         else:
@@ -184,7 +187,8 @@ class MainWindow(QMainWindow):
         if self.client_receiver is None:
             self.client_receiver = run_client_notifications_receiver(
                 handlers={CODE_SHOW_NOTIFICATION: self.handle_show_notification,
-                          CODE_CLICK_HAPPENED: self.handle_click_happened}
+                          CODE_CLICK_HAPPENED: self.handle_click_happened,
+                          CODE_AUTO_CLICKER_CHANGED: self.handle_auto_clicker_changed}
             )
         if self._connect_to_server_thread is None:
             thread = ConnectToServerThread(self, client=self.client)
@@ -195,10 +199,7 @@ class MainWindow(QMainWindow):
 
     def connect_to_server_finished(self):
         self.client = self._connect_to_server_thread.client
-        server_info = self._connect_to_server_thread.server_info
-        if server_info:
-            self._auto_clicker_interval = server_info.get('auto_clicker_interval')
-            self._auto_clicker_seconds_left_for_interval = server_info.get('auto_clicker_seconds_left_for_interval')
+        self.auto_clicker_changed_receiver()
         del self._connect_to_server_thread
         self._connect_to_server_thread = None
         if not self._client_connection_check_timer:
@@ -212,14 +213,23 @@ class MainWindow(QMainWindow):
     def handle_click_happened(self, **_):
         self.click_occurred_signal.emit()
 
+    def handle_auto_clicker_changed(self, **_):
+        self.auto_clicker_changed_signal.emit()
+
     def click_occurred_signal_receiver(self):
+        self.auto_clicker_changed_receiver()
+
+    def auto_clicker_changed_receiver(self):
         server_info = self.client.server_info()
         if server_info:
             self._auto_clicker_interval = server_info.get('auto_clicker_interval')
             self._auto_clicker_seconds_left_for_interval = server_info.get('auto_clicker_seconds_left_for_interval')
-        print server_info
-        self._auto_clicker_seconds_left_for_interval = self._auto_clicker_interval
-        self._update_auto_clicker_interval_timer = self.startTimer(1000)
+        if self._auto_clicker_interval:
+            self._auto_clicker_interval *= 60
+        else:
+            self._auto_clicker_interval = None
+        if self._update_auto_clicker_interval_timer is None:
+            self._update_auto_clicker_interval_timer = self.startTimer(1000)
 
     def status_updated(self, status):
         (status_text, status_color), args = status
@@ -241,7 +251,7 @@ class MainWindow(QMainWindow):
         if event.timerId() == self._client_connection_check_timer:
             self.connect_to_server()
         elif event.timerId() == self._update_auto_clicker_interval_timer:
-            if self._auto_clicker_interval is None:
+            if self._auto_clicker_seconds_left_for_interval is None:
                 self.tray_menu.set_auto_click_text(None)
                 return
             self._auto_clicker_seconds_left_for_interval -= 1
@@ -249,6 +259,7 @@ class MainWindow(QMainWindow):
             if self._auto_clicker_seconds_left_for_interval == 0:
                 self._auto_clicker_seconds_left_for_interval = self._auto_clicker_interval
                 self.killTimer(self._update_auto_clicker_interval_timer)
+                self._update_auto_clicker_interval_timer = None
 
 
 def main():

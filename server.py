@@ -173,8 +173,10 @@ class MainServer(Server):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.stop_event.set()
         if interval is not None:
+            interval *= 60
             self.auto_clicker_thread = AutoClicker(interval, self.click)
             self.auto_clicker_thread.start()
+        self.push(CODE_AUTO_CLICKER_CHANGED, new_interval=interval)
 
     def click(self):
         if self.auto_clicker_thread:
@@ -217,13 +219,13 @@ def _init_server(server, threaded=True):
 
 
 class AutoClicker(Thread):
-    def __init__(self, interval_in_minutes, method):
+    def __init__(self, interval_in_seconds, method):
         super(AutoClicker, self).__init__()
-        interval_in_minutes = int(interval_in_minutes)
-        if interval_in_minutes < 1:
-            interval_in_minutes = 1
+        interval_in_seconds = int(interval_in_seconds)
+        if interval_in_seconds < 1:
+            interval_in_seconds = 1
         self.stop_event = Event()
-        self.interval = interval_in_minutes
+        self.interval = interval_in_seconds
         self.seconds_left_for_interval = self.interval - 1
         self.method = method
 

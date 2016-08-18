@@ -30,6 +30,7 @@ CODE_SET_AUTO_CLICKER = _next()
 # Events codes
 CODE_SHOW_NOTIFICATION = _next()
 CODE_CLICK_HAPPENED = _next()
+CODE_AUTO_CLICKER_CHANGED = _next()
 
 # Server Settings
 FIND_SERVER_TIMEOUT = 5  # 5 Seconds
