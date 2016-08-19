@@ -112,7 +112,7 @@ class NotificationDialog(QDialog):
         if self.opacity_animator.state() == QPropertyAnimation.Running:
             self.opacity_animator.stop()
         self.opacity_animator.setStartValue(self.windowOpacity())
-        self.opacity_animator.setEndValue(0.2)
+        self.opacity_animator.setEndValue(0.4)
         self.opacity_animator.setDuration(200)
         self.opacity_animator.start()
         super(NotificationDialog, self).enterEvent(event)
