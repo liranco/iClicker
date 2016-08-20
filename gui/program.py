@@ -21,7 +21,7 @@ def get_status_formatted(status, *args):
 
 
 class Menu(QMenu):
-    AUTO_CLICK_TEXT = 'Auto Click ({})'
+    AUTO_CLICK_TEXT = 'Auto Clicker ({})'
 
     def __init__(self, parent):
         """
@@ -177,6 +177,9 @@ class MainWindow(QMainWindow):
         if self._client_connection_check_timer:
             self.killTimer(self._client_connection_check_timer)
             self._client_connection_check_timer = None
+        if self._update_auto_clicker_interval_timer:
+            self.killTimer(self._update_auto_clicker_interval_timer)
+            self._update_auto_clicker_interval_timer = None
         if self._connect_to_server_thread:
             self._connect_to_server_thread.status_updated.disconnect(self.status_updated)
             self._connect_to_server_thread.exit()
