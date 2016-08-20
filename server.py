@@ -190,6 +190,7 @@ class MainServer(Server):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.stop_event.set()
             self.auto_clicker_thread.join()
+        Server.server_close(self)
 
 
 def answer_search_requests(threaded=True):
