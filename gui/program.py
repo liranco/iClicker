@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
         interval, accepted = QInputDialog().getInt(self,
                                                    'Set Auto Clicker Interval',
                                                    'Please enter interval in minutes, enter 0 to disable:',
-                                                   self._auto_clicker_interval or 10, 0)
+                                                   (self._auto_clicker_interval or 600) / 60, 0)
         if accepted:
             self.client.set_auto_clicker(interval)
 
