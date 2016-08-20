@@ -23,6 +23,8 @@ def get_status_formatted(status, *args):
 class Menu(QMenu):
     AUTO_CLICK_TEXT = 'Auto Clicker ({})'
 
+    set_enabled = Signal(bool)
+
     def __init__(self, parent):
         """
         :type parent: MainWindow
@@ -34,13 +36,17 @@ class Menu(QMenu):
         status_label_action.setDefaultWidget(self.status_label)
         self.addAction(status_label_action)
         self.addSeparator()
-        dance_action = self.addAction('Dance')
+        dance_action = self.addAction('Dance')  # type: QAction
         click_action = self.addAction('Click')
         self.auto_click_action = self.addAction('')
         self.set_auto_click_text(None)
         dance_action.triggered.connect(lambda: parent.client.dance())
         click_action.triggered.connect(lambda: parent.client.click())
         self.auto_click_action.triggered.connect(parent.show_auto_click)
+        self.set_enabled.connect(dance_action.setEnabled)
+        self.set_enabled.connect(click_action.setEnabled)
+        self.set_enabled.connect(self.auto_click_action.setEnabled)
+        self.set_enabled.emit(False)
         self.addSeparator()
         settings_action = self.addAction('Settings')
         settings_action.triggered.connect(parent.show_settings)
@@ -202,7 +208,12 @@ class MainWindow(QMainWindow):
 
     def connect_to_server_finished(self):
         self.client = self._connect_to_server_thread.client
-        self.auto_clicker_changed_receiver()
+        if self.client:
+            self.auto_clicker_changed_receiver()
+            self.tray_menu.set_enabled.emit(True)
+        else:
+            self.tray_menu.set_enabled.emit(False)
+            self.tray_menu.set_auto_click_text(None)
         del self._connect_to_server_thread
         self._connect_to_server_thread = None
         if not self._client_connection_check_timer:
