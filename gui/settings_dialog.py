@@ -2,12 +2,14 @@ from PySide.QtGui import *
 from PySide.QtCore import *
 from settings import Settings, ServerSettings, ClientSettings
 from notification_widget import NotificationSettings
+from hotkey_listener import HotkeySettings
 from consts import *
 
 settings = Settings()
 server_settings = ServerSettings()
 client_settings = ClientSettings()
 notification_settings = NotificationSettings()
+hotkey_settings = HotkeySettings()
 
 
 class SettingsDialog(QDialog):
@@ -34,6 +36,9 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.settings_groups)
         self.notification_settings = NotificationSettings(self)
         layout.addWidget(self.notification_settings)
+
+        self.hotkey_settings = HotKeySettingsGroup(self)
+        layout.addWidget(self.hotkey_settings)
 
         self.buttons_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply,
                                             parent=self)
@@ -67,7 +72,7 @@ class SettingsDialog(QDialog):
         :rtype: list[BaseSettings]
         """
         return [self.settings_groups.widget(i) for i in xrange(self.settings_groups.count())] + \
-               [self.notification_settings]
+               [self.notification_settings, self.hotkey_settings]
 
     def closeEvent(self, event):
         [widget.closed() for widget in self.all_settings()]
@@ -296,6 +301,7 @@ class NotificationSettings(BaseSettings):
         self.notification_duration = QSpinBox(self)
         self.notification_duration.setMinimum(1)
         self.notification_duration.setValue(notification_settings.duration)
+        self.notification_duration.setSuffix(' seconds')
         notification_duration_row.layout().addWidget(self.notification_duration)
         self.notification_expires = QCheckBox('Stay &Until Closed', self)
         self.notification_expires.setChecked(notification_settings.notification_expires)
@@ -313,9 +319,56 @@ class NotificationSettings(BaseSettings):
     def _get_color(self):
         dialog = QColorDialog(notification_settings.color, self)
         dialog.exec_()
-        self._set_color(dialog.selectedColor())
+        color = dialog.selectedColor()
+        if color.isValid():
+            self._set_color()
 
     def save(self):
         notification_settings.color = self._selected_color
         notification_settings.duration = self.notification_duration.value()
         notification_settings.notification_expires = self.notification_expires.isChecked()
+
+
+class HotKeySettingsGroup(BaseSettings):
+    def __init__(self, parent=None):
+        super(HotKeySettingsGroup, self).__init__(title='Global Hotkey', parent=parent)
+        layout = QVBoxLayout()
+        self._key = hotkey_settings.key
+        self.is_enabled = QCheckBox('Enable?')
+        self.ctrl_mod = QCheckBox('Ctrl')
+        self.alt_mod = QCheckBox('Alt')
+        self.win_mod = QCheckBox('Win')
+        self.key_input = QLineEdit()
+        self.key_input.keyPressEvent = self.line_key_press_event
+
+        hotkey_options = QWidget()
+        hotkey_options.setLayout(QHBoxLayout())
+        hotkey_options.layout().setContentsMargins(0, 0, 0, 0)
+        map(hotkey_options.layout().addWidget, (self.ctrl_mod, self.alt_mod, self.win_mod, QLabel('+'), self.key_input))
+        layout.addWidget(self.is_enabled)
+        layout.addWidget(hotkey_options)
+
+        self.setLayout(layout)
+
+        self.is_enabled.setChecked(hotkey_settings.is_enabled)
+        self.ctrl_mod.setChecked(hotkey_settings.ctrl)
+        self.alt_mod.setChecked(hotkey_settings.alt)
+        self.win_mod.setChecked(hotkey_settings.win)
+        if hotkey_settings.key_text:
+            self.key_input.setText(hotkey_settings.key_text)
+
+    def line_key_press_event(self, event):
+        if event.key() not in (0, Qt.Key_unknown):
+            try:
+                self.key_input.setText(str(QKeySequence(event.key()).toString()))
+                self._key = event.nativeVirtualKey()
+            except UnicodeEncodeError:
+                return
+
+    def save(self):
+        hotkey_settings.is_enabled = self.is_enabled.isChecked()
+        hotkey_settings.ctrl = self.ctrl_mod.isChecked()
+        hotkey_settings.alt = self.alt_mod.isChecked()
+        hotkey_settings.win = self.win_mod.isChecked()
+        hotkey_settings.key = self._key
+        hotkey_settings.key_text = self.key_input.text()
