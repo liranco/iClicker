@@ -5,6 +5,7 @@ from PySide.QtCore import *
 from settings import BaseSettingsGroup
 
 HOTKEY_ID = 9119
+user32 = ctypes.windll.user32
 
 
 class HotkeySettings(BaseSettingsGroup):
@@ -82,15 +83,17 @@ class HotkeyThread(QThread):
             modifier |= win32con.MOD_CONTROL
         self._modifiers = modifier
         self._key = settings.key
+        self._stop_run = False
 
     def run(self):
 
         # Solution taken from: http://timgolden.me.uk/python/win32_how_do_i/catch_system_wide_hotkeys.html
-        user32 = ctypes.windll.user32
         by_ref = ctypes.byref
 
         if not user32.RegisterHotKey(None, HOTKEY_ID, self._modifiers, self._key):
+            print 'BADDDD'
             raise WindowsError("Unable to register id", HOTKEY_ID)
+        print 'Registered'
 
         try:
             msg = wintypes.MSG()
@@ -103,4 +106,11 @@ class HotkeyThread(QThread):
                 user32.DispatchMessageA(by_ref(msg))
 
         finally:
+            print 'Unregisteered'
             user32.UnregisterHotKey(None, HOTKEY_ID)
+
+    def stop(self):
+        user32.UnregisterHotKey(None, HOTKEY_ID)
+        self._stop_run = True
+        user32.keybd_event(None, 0, 0, 0)
+        user32.keybd_event(None, 0, 0x0002, 0)

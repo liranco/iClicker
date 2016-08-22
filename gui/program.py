@@ -5,6 +5,7 @@ from PySide.QtCore import *
 from settings import Settings, ServerSettings, ClientSettings
 from settings_dialog import SettingsDialog
 from notification_widget import NotificationDialog
+from hotkey_listener import HotkeyThread, HotkeySettings
 from consts import *
 
 
@@ -41,7 +42,7 @@ class Menu(QMenu):
         self.auto_click_action = self.addAction('')
         self.set_auto_click_text(None)
         dance_action.triggered.connect(lambda: parent.client.dance())
-        click_action.triggered.connect(lambda: parent.client.click())
+        click_action.triggered.connect(lambda: parent.click())
         self.auto_click_action.triggered.connect(parent.show_auto_click)
         self.set_enabled.connect(dance_action.setEnabled)
         self.set_enabled.connect(click_action.setEnabled)
@@ -95,6 +96,7 @@ class MainWindow(QMainWindow):
         self._client_connection_check_timer = None
         self._update_auto_clicker_interval_timer = None
         self.notification_widget = None  # type: NotificationDialog
+        self.global_hotkey_thread = None  # type: HotkeyThread
         self._notifications_queue = []
         self._notifications_passed = 0
         self.update_notifications_signal.connect(lambda message: self._show_notification(*message))
@@ -106,6 +108,7 @@ class MainWindow(QMainWindow):
             self.connect_to_server()
 
         self.tray.setContextMenu(self.tray_menu)
+        self.start_global_hotkey()
         self.tray.show()
 
     def show_settings(self):
@@ -121,6 +124,20 @@ class MainWindow(QMainWindow):
             elif new_mode == CLIENT_MODE:
                 self.stop_server()
                 self.connect_to_server()
+            self.start_global_hotkey()
+
+    def start_global_hotkey(self):
+        if self.global_hotkey_thread:
+            print 'Stopping'
+            self.global_hotkey_thread.stop()
+            self.global_hotkey_thread = None
+            print 'Stopped'
+        if HotkeySettings().is_enabled:
+            print 'Starting'
+            self.global_hotkey_thread = HotkeyThread(self)
+            self.global_hotkey_thread.hotkey_hit.connect(self.click)
+            self.global_hotkey_thread.start()
+            print 'Started'
 
     def show_auto_click(self):
         interval, accepted = QInputDialog().getInt(self,
@@ -129,6 +146,10 @@ class MainWindow(QMainWindow):
                                                    (self._auto_clicker_interval or 600) / 60, 0)
         if accepted:
             self.client.set_auto_clicker(interval)
+
+    def click(self):
+        if self.client:
+            self.client.click()
 
     def start_server(self):
         from client import Client

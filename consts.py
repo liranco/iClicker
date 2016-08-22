@@ -37,6 +37,11 @@ FIND_SERVER_TIMEOUT = 5  # 5 Seconds
 SESSION_TIMEOUT = 20     # 20 Seconds
 
 
+def split_json_data(json_data):
+    import re
+    return ['{%s}' % group.strip('{}') for group in re.split('\}\s*\{', json_data, flags=re.DOTALL)]
+
+
 if __name__ == '__main__':
     # Print all codes
     print "\r\n".join(

@@ -95,10 +95,14 @@ class Client(object):
     def receive(self):
         data = self.socket.recv(1024)
         if data:
-            data = json.loads(data)
-            if 'name' in data:
-                self.server_name = data['name']
-            return data['code'], data
+            try:
+                data = json.loads(data)
+                if 'name' in data:
+                    self.server_name = data['name']
+                return data['code'], data
+            except:
+                print data
+                raise
         else:
             return None, None
 
