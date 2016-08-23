@@ -150,11 +150,14 @@ class Server(ThreadingTCPServer):
 
 class MainServer(Server):
     def __init__(self, server_name, server_address):
+        from serial_api import Clicker
+
         Server.__init__(self, server_name, server_address, handler=MainServerHandler)
         self.clients = {}
         self.timeout = 5
         self.auto_clicker_interval = None
         self.auto_clicker_thread = None  # type: AutoClicker
+        self._clicker = Clicker()
 
     def push(self, code, **kwargs):
         from client import Client
@@ -184,6 +187,7 @@ class MainServer(Server):
     def click(self):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
+        self._clicker.click()
         self.push(CODE_CLICK_HAPPENED)
 
     def server_close(self):
