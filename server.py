@@ -143,7 +143,7 @@ class MainServerHandler(BaseServerHandler):
         )
 
     def handle_get_temperature(self, **_):
-        return dict(temperature=self.server.clicker.temperature)
+        return dict(temperature=self.server.temperature)
 
 
 class Server(ThreadingTCPServer):
@@ -160,8 +160,12 @@ class MainServer(Server):
         self.clients = {}
         self.timeout = 5
         self.auto_clicker_interval = None
-        self.auto_clicker_thread = None  # type: AutoClicker
-        self.clicker = Clicker()
+        self.auto_clicker_thread = None  # type: RepeatingThread
+        self.temperature = None  # type: float
+        self.temperature_refresher_thread = RepeatingThread(20, self.update_temperature)
+        self.temperature_refresher_thread.start()
+        self._clicker = Clicker()
+        self.update_temperature()
 
     def push(self, code, **kwargs):
         from client import Client
@@ -184,15 +188,19 @@ class MainServer(Server):
             self.auto_clicker_thread.stop_event.set()
         if interval is not None:
             interval *= 60
-            self.auto_clicker_thread = AutoClicker(interval, self.click)
+            self.auto_clicker_thread = RepeatingThread(interval, self.click)
             self.auto_clicker_thread.start()
         self.push(CODE_AUTO_CLICKER_CHANGED, new_interval=interval)
 
     def click(self):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
-        self.clicker.click()
+        self._clicker.click()
         self.push(CODE_CLICK_HAPPENED)
+
+    def update_temperature(self):
+        self.temperature = self._clicker.temperature
+        print self.temperature
 
     def server_close(self):
         if self.auto_clicker_thread:
@@ -230,9 +238,9 @@ def _init_server(server, threaded=True):
         server.serve_forever()
 
 
-class AutoClicker(Thread):
+class RepeatingThread(Thread):
     def __init__(self, interval_in_seconds, method):
-        super(AutoClicker, self).__init__()
+        super(RepeatingThread, self).__init__()
         interval_in_seconds = int(interval_in_seconds)
         if interval_in_seconds < 1:
             interval_in_seconds = 1
@@ -248,6 +256,7 @@ class AutoClicker(Thread):
             else:
                 self.seconds_left_for_interval = self.interval - 1
                 self.method()
+
 
 
 if __name__ == '__main__':
