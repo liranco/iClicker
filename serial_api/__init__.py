@@ -88,7 +88,8 @@ class Arduino(object):
         self._send_code(CODE_RESET_CLICKER)
 
     def is_click2_enabled(self):
-        return self.click2_pos == 255
+        print self.click2_pos
+        return 0 <= self.click2_pos <= 180
 
     def disable_click2(self):
         self.click2_pos = 255

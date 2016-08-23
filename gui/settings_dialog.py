@@ -126,7 +126,9 @@ class ServerSettings(BaseModeSettings):
         layout.addRow("Server &Name:", self.server_name)
         layout.addRow("Server &Port:", self.server_port)
         layout.addRow("P&assword:", self.server_password)
-        layout.addRow(QPushButton('&Calibrate Clicker', parent=self))
+        calibrate_button = QPushButton('&Calibrate Clicker', parent=self)
+        calibrate_button.clicked.connect(lambda: ClickerCalibrator(self).exec_())
+        layout.addRow(calibrate_button)
         self.setLayout(layout)
 
         self.server_name.setText(server_settings.server_name)
@@ -372,3 +374,82 @@ class HotKeySettingsGroup(BaseSettings):
         hotkey_settings.win = self.win_mod.isChecked()
         hotkey_settings.key = self._key
         hotkey_settings.key_text = self.key_input.text()
+
+
+class ClickerCalibrator(QDialog):
+    def __init__(self, parent):
+        from serial_api import Arduino
+        super(ClickerCalibrator, self).__init__(parent)
+        layout = QFormLayout()
+
+        self.arduino = Arduino()
+
+        def get_spin_box_widget():
+            widget = QWidget(self)
+            widget.setLayout(QHBoxLayout())
+            widget.layout().setContentsMargins(0, 0, 0, 0)
+            spin_box = QSpinBox(widget)
+            spin_box.setMinimum(0)
+            spin_box.setMaximum(180)
+            spin_box.setSuffix(u'\u00B0')
+            widget.layout().addWidget(spin_box)
+            test_button = QPushButton('Test', widget)
+            test_button.clicked.connect(lambda: self.test_value(spin_box.value()))
+            widget.layout().addWidget(test_button)
+            widget.spin_box = spin_box
+            widget.setEnabled = lambda enabled: [val.setEnabled(enabled) for val in (spin_box, test_button)]
+            return widget
+
+        self.is_switch_on_off = QCheckBox("Does the switch has two buttons (On/Off)?")
+        layout.addRow(self.is_switch_on_off)
+        warn_label = QLabel("Be careful with the values you enter! If you'll enter a value too large or too low, "
+                            "the clicker may break!")
+        warn_label.setStyleSheet('QLabel { color: red }')
+        layout.addRow(warn_label)
+        self.switch_off_position = get_spin_box_widget()
+        layout.addRow("Click Off Position", self.switch_off_position)
+        self.is_switch_on_off.stateChanged.connect(
+            lambda: self.switch_off_position.setEnabled(self.is_switch_on_off.isChecked()))
+        self.neutral_position = get_spin_box_widget()
+        layout.addRow("Neutral Position", self.neutral_position)
+        self.switch_on_position = get_spin_box_widget()
+        layout.addRow("Click Position", self.switch_on_position)
+
+        self.buttons_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, parent=self)
+        self.buttons_box.button(QDialogButtonBox.Save).clicked.connect(self.save)
+        self.buttons_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
+        layout.addRow(self.buttons_box)
+
+        self.setLayout(layout)
+
+        self.fill_values()
+
+    def test_value(self, new_value):
+        print new_value, type(new_value)
+        self.arduino.move_to(new_value)
+
+    def fill_values(self):
+        is_switch_on_off = self.arduino.is_click2_enabled()
+        released_value = self.arduino.released_pos
+        self.is_switch_on_off.setChecked(is_switch_on_off)
+        if is_switch_on_off:
+            self.switch_off_position.spin_box.setValue(self.arduino.click2_pos)
+            self.switch_off_position.setEnabled(True)
+        else:
+            self.switch_off_position.spin_box.setValue(released_value)
+            self.switch_off_position.setEnabled(False)
+        self.neutral_position.spin_box.setValue(released_value)
+        self.switch_on_position.spin_box.setValue(self.arduino.click_pos)
+
+    def save(self):
+        if self.is_switch_on_off.isChecked():
+            self.arduino.click2_pos = self.switch_off_position.spin_box.value()
+        else:
+            self.arduino.disable_click2()
+        self.arduino.click_pos = self.switch_on_position.spin_box.value()
+        self.arduino.released_pos = self.neutral_position.spin_box.value()
+        self.close()
+
+    def close(self):
+        self.arduino.move_to_released_pos()
+        super(ClickerCalibrator, self).close()
