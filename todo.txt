@@ -1,0 +1,2 @@
+Hotkeys not working
+When canceling settings exception is risen (hotkeys?)
