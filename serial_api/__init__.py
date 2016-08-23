@@ -17,9 +17,9 @@ VID = 0x1B4F
 PID = 0x9206
 
 
-class Arduino(object):
+class Clicker(object):
     @classmethod
-    def find_arduino_port(cls):
+    def find_clicker_port(cls):
         from serial.tools.list_ports import comports
         for port in comports():
             if port.pid == PID and port.vid == VID:
@@ -28,7 +28,7 @@ class Arduino(object):
     @contextmanager
     def _serial_interaction(self, code):
         from serial import Serial
-        port = self.port or self.find_arduino_port()
+        port = self.port or self.find_clicker_port()
         serial = Serial(port)
         serial.write(str(code) + '\n')
         yield serial
