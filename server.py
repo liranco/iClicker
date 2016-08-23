@@ -129,7 +129,7 @@ class MainServerHandler(BaseServerHandler):
             self.server.push(CODE_SHOW_NOTIFICATION, title='Auto Clicker set!',
                              message="{} has set the auto clicker's interval to {} minutes".format(name, interval))
         else:
-            self.server.push(CODE_SHOW_NOTIFICATION, title='Auto Clicker disabled!',
+            self.server.push(CODE_SHOW_NOTIFICATION, title='Auto Clicker Stopped',
                              message="{} has disabled the auto clicker".format(name))
 
     def get_server_info(self, **_):
