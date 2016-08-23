@@ -263,6 +263,7 @@ class MainWindow(QMainWindow):
             self._auto_clicker_interval *= 60
         else:
             self._auto_clicker_interval = None
+            self._auto_clicker_seconds_left_for_interval = None
         if self._update_auto_clicker_interval_timer is None:
             self._update_auto_clicker_interval_timer = self.startTimer(1000)
 
