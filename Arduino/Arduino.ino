@@ -86,8 +86,7 @@ void loop() {
         break;
       case CODE_SET_RELEASED_POS: {
         int val = Serial.parseInt();
-        if (val >= 0 && val <= 180) {
-          EEPROM.update(RELEASED_ADDRESS, val);
+        if (val >= 0 && val <= 180) {          EEPROM.update(RELEASED_ADDRESS, val);
         }
         break;    
       }
@@ -96,7 +95,7 @@ void loop() {
         break;
       case CODE_SET_CLICK2_POS: {
         int val = Serial.parseInt();
-        if (val >= 0 && val <= 180) {
+        if ((val >= 0 && val <= 180) || val == 255) {
           EEPROM.update(CLICK2_ADDRESS, val);
         }
         break;    
@@ -105,7 +104,7 @@ void loop() {
         while (!Serial.available()) {}
         int val = Serial.parseInt();
         if (val >= 0 && val <= 180) {
-            moveClicker(EEPROM.read(val));
+            moveClicker(val);
         }
         break;
       }
