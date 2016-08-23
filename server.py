@@ -96,7 +96,8 @@ class MainServerHandler(BaseServerHandler):
             CODE_SAY_HELLO: self.handle_say_hello,
             CODE_CLICK: self.handle_click,
             CODE_SET_AUTO_CLICKER: self.handle_set_auto_clicker,
-            CODE_GET_SERVER_INFO: self.get_server_info
+            CODE_GET_SERVER_INFO: self.handle_get_server_info,
+            CODE_GET_TEMPERATURE: self.handle_get_temperature,
         }
 
     def _extend_client_timeout(self):
@@ -130,9 +131,9 @@ class MainServerHandler(BaseServerHandler):
                              message="{} has set the auto clicker's interval to {} minutes".format(name, interval))
         else:
             self.server.push(CODE_SHOW_NOTIFICATION, title='Auto Clicker Stopped',
-                             message="{} has disabled the auto clicker".format(name))
+                             message="{} has disabled the auto clicker.".format(name))
 
-    def get_server_info(self, **_):
+    def handle_get_server_info(self, **_):
         from time import time
         return dict(
             server_time=time(),
@@ -140,6 +141,9 @@ class MainServerHandler(BaseServerHandler):
             auto_clicker_seconds_left_for_interval=self.server.auto_clicker_thread.seconds_left_for_interval
             if self.server.auto_clicker_thread else None
         )
+
+    def handle_get_temperature(self, **_):
+        return dict(temperature=self.server.clicker.temperature)
 
 
 class Server(ThreadingTCPServer):
@@ -157,7 +161,7 @@ class MainServer(Server):
         self.timeout = 5
         self.auto_clicker_interval = None
         self.auto_clicker_thread = None  # type: AutoClicker
-        self._clicker = Clicker()
+        self.clicker = Clicker()
 
     def push(self, code, **kwargs):
         from client import Client
@@ -187,7 +191,7 @@ class MainServer(Server):
     def click(self):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
-        self._clicker.click()
+        self.clicker.click()
         self.push(CODE_CLICK_HAPPENED)
 
     def server_close(self):

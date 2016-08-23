@@ -36,6 +36,13 @@ class Menu(QMenu):
         status_label_action = QWidgetAction(self)
         status_label_action.setDefaultWidget(self.status_label)
         self.addAction(status_label_action)
+
+        self.temperature_label = QLabel()
+        self.temperature_label.setStyleSheet("QLabel { color: blue }")
+        temperature_label_action = QWidgetAction(self)
+        temperature_label_action.setDefaultWidget(self.temperature_label)
+        self.addAction(temperature_label_action)
+
         self.addSeparator()
         dance_action = self.addAction('Dance')  # type: QAction
         click_action = self.addAction('Click')
@@ -75,6 +82,12 @@ class Menu(QMenu):
             value = round(value[0], 1), value[1]
             self.auto_click_action.setText(self.AUTO_CLICK_TEXT.format('%.2g %s' % value))
 
+    def set_temperature(self, temperature):
+        if temperature:
+            self.temperature_label.setText(u"It's currently {}\u00B0 Celsius".format(int(round(temperature))))
+        else:
+            self.temperature_label.setText(None)
+
 
 class MainWindow(QMainWindow):
     update_notifications_signal = Signal(tuple)
@@ -92,9 +105,11 @@ class MainWindow(QMainWindow):
         self._auto_clicker_interval = None
         self._auto_clicker_seconds_left_for_interval = None
         self._connect_to_server_thread = None  # type: ConnectToServerThread
+        self._temperature = None  # type: float
         self.client_receiver = None
         self._client_connection_check_timer = None
         self._update_auto_clicker_interval_timer = None
+        self._update_temperature_timer = None
         self.notification_widget = None  # type: NotificationDialog
         self.global_hotkey_thread = None  # type: HotkeyThread
         self._notifications_queue = []
@@ -232,6 +247,7 @@ class MainWindow(QMainWindow):
         if self.client:
             self.auto_clicker_changed_receiver()
             self.tray_menu.set_enabled.emit(True)
+            self.update_temperature()
         else:
             self.tray_menu.set_enabled.emit(False)
             self.tray_menu.set_auto_click_text(None)
@@ -241,6 +257,15 @@ class MainWindow(QMainWindow):
             self._client_connection_check_timer = self.startTimer(5000)
         if not self._update_auto_clicker_interval_timer:
             self._update_auto_clicker_interval_timer = self.startTimer(1000)
+        if not self._update_temperature_timer:
+            self._update_temperature_timer = self.startTimer(5000)
+
+    def update_temperature(self):
+        if self.client:
+            self._temperature = self.client.get_temperature()
+            self.tray_menu.set_temperature(self._temperature)
+        else:
+            self.tray_menu.set_temperature(None)
 
     def handle_show_notification(self, title, message, **_):
         self.update_notifications_signal.emit((title, message))
@@ -296,6 +321,8 @@ class MainWindow(QMainWindow):
                 self._auto_clicker_seconds_left_for_interval = self._auto_clicker_interval
                 self.killTimer(self._update_auto_clicker_interval_timer)
                 self._update_auto_clicker_interval_timer = None
+        elif event.timerId() == self._update_temperature_timer:
+            self.update_temperature()
 
 
 def main():

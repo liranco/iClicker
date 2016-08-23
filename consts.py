@@ -25,6 +25,7 @@ CODE_CHALLENGE_SUCCESS = _next()
 # instruction codes
 CODE_SAY_HELLO = _next()
 CODE_GET_SERVER_INFO = _next()
+CODE_GET_TEMPERATURE = _next()
 CODE_CLICK = _next()
 CODE_SET_AUTO_CLICKER = _next()
 # Events codes

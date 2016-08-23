@@ -130,6 +130,9 @@ class Client(object):
     def click(self):
         self.send_receive(CODE_CLICK)
 
+    def get_temperature(self):
+        return self.send_receive(CODE_GET_TEMPERATURE)[1]['temperature']
+
     def set_auto_clicker(self, interval):
         self.send_receive(CODE_SET_AUTO_CLICKER, interval=interval)
 
