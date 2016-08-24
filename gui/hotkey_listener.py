@@ -71,7 +71,7 @@ class HotkeySettings(BaseSettingsGroup):
 class HotkeyThread(QThread):
     hotkey_hit = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super(HotkeyThread, self).__init__(parent)
         modifier = 0
         settings = HotkeySettings()
@@ -89,10 +89,10 @@ class HotkeyThread(QThread):
 
         # Solution taken from: http://timgolden.me.uk/python/win32_how_do_i/catch_system_wide_hotkeys.html
         by_ref = ctypes.byref
-
-        if not user32.RegisterHotKey(None, HOTKEY_ID, self._modifiers, self._key):
+        h_wnd = self.get_window_handle()
+        if not user32.RegisterHotKey(h_wnd, HOTKEY_ID, self._modifiers, self._key):
             print 'BADDDD'
-            raise WindowsError("Unable to register id", HOTKEY_ID)
+            raise WindowsError("Unable to register id")
         print 'Registered'
 
         try:
@@ -114,3 +114,16 @@ class HotkeyThread(QThread):
         self._stop_run = True
         user32.keybd_event(None, 0, 0, 0)
         user32.keybd_event(None, 0, 0x0002, 0)
+
+
+    def get_window_handle(self):
+        # Imports all we need
+        from ctypes import pythonapi, c_void_p, py_object
+
+        # Setup arguments and return types
+        pythonapi.PyCObject_AsVoidPtr.restype = c_void_p
+        pythonapi.PyCObject_AsVoidPtr.argtypes = [py_object]
+
+        # Convert PyCObject to a void pointer
+        h_wnd = pythonapi.PyCObject_AsVoidPtr(self.parent().winId())
+        return h_wnd
