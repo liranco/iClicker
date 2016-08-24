@@ -165,6 +165,7 @@ class MainServer(Server):
         self.temperature_refresher_thread = RepeatingThread(20, self.update_temperature)
         self.temperature_refresher_thread.start()
         self._clicker = Clicker()
+        self._is_last_clicked_on = False
         self.update_temperature()
 
     def push(self, code, **kwargs):
@@ -195,12 +196,19 @@ class MainServer(Server):
     def click(self):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
-        self._clicker.click()
+        if self._clicker.is_click2_enabled():
+            if self._is_last_clicked_on:
+                self._clicker.click2()
+                self._is_last_clicked_on = False
+            else:
+                self._clicker.click()
+                self._is_last_clicked_on = True
+        else:
+            self._clicker.click()
         self.push(CODE_CLICK_HAPPENED)
 
     def update_temperature(self):
         self.temperature = self._clicker.temperature
-        print self.temperature
 
     def server_close(self):
         if self.auto_clicker_thread:
