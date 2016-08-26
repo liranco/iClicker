@@ -214,6 +214,9 @@ class MainServer(Server):
         if self.auto_clicker_thread:
             self.auto_clicker_thread.stop_event.set()
             self.auto_clicker_thread.join()
+        if self.temperature_refresher_thread:
+            self.temperature_refresher_thread.stop_event.set()
+            self.temperature_refresher_thread.join()
         Server.server_close(self)
 
 
