@@ -142,11 +142,14 @@ class MainWindow(QMainWindow):
                 self.connect_to_server()
             self.start_global_hotkey()
 
-    def start_global_hotkey(self):
+    def stop_global_hotkey(self):
         if self.global_hotkey_thread:
             self.global_hotkey_thread.stop()
             self.global_hotkey_thread.wait()
             self.global_hotkey_thread = None
+
+    def start_global_hotkey(self):
+        self.stop_global_hotkey()
         if HotkeySettings().is_enabled:
             self.global_hotkey_thread = HotkeyThread(self)
             self.global_hotkey_thread.hotkey_hit.connect(self.click)
@@ -313,6 +316,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         if self._client_connection_check_timer:
             self.killTimer(self._client_connection_check_timer)
+        self.stop_global_hotkey()
         self.stop_server()
         self.disconnect_client()
         super(MainWindow, self).closeEvent(event)
