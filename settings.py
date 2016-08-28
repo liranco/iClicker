@@ -16,7 +16,7 @@ class Settings(QSettings):
     def __init__(self):
         if Settings._singleton_object is self:
             return
-        super(Settings, self).__init__(QSettings.IniFormat, QSettings.UserScope, "MazganINC", 'Mazgan')
+        super(Settings, self).__init__(QSettings.UserScope, "MazganINC", 'Mazgan')
         self.setIniCodec('UTF-8')
         self.setFallbacksEnabled(False)
 
