@@ -302,9 +302,10 @@ class NotificationSettings(BaseSettings):
         notification_duration_row.setLayout(QHBoxLayout())
         notification_duration_row.layout().setContentsMargins(0, 0, 0, 0)
         self.notification_duration = QSpinBox(self)
-        self.notification_duration.setMinimum(1)
+        self.notification_duration.valueChanged.connect(self._notification_duration_value_changed)
+        self.notification_duration.setMinimum(0)
         self.notification_duration.setValue(notification_settings.duration)
-        self.notification_duration.setSuffix(' seconds')
+        self._notification_duration_value_changed(self.notification_duration.value())
         notification_duration_row.layout().addWidget(self.notification_duration)
         self.notification_expires = QCheckBox('Stay &Until Closed', self)
         self.notification_expires.setChecked(notification_settings.notification_expires)
@@ -312,6 +313,12 @@ class NotificationSettings(BaseSettings):
 
         layout.addRow('Notification &Duration:', notification_duration_row)
         self.setLayout(layout)
+
+    def _notification_duration_value_changed(self, value):
+        if value > 0:
+            self.notification_duration.setSuffix(' seconds')
+        else:
+            self.notification_duration.setSuffix(' (Disabled)')
 
     def _set_color(self, color=None):
         color = color or notification_settings.color
