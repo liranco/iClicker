@@ -51,20 +51,21 @@ class NotificationSettings(BaseSettingsGroup):
 class NotificationDialog(QDialog):
     notifications_count_updated = Signal()
 
-    def __init__(self, parent, title, body, remaining_notifications=None, this_notification_count=1):
+    def __init__(self, parent, title, body, remaining_notifications=None, this_notification_count=1, scale=1):
         super(NotificationDialog, self).__init__(parent)
+        self.size = NOTIFICATION_SIZE * scale  # type: QSize
         layout = QBoxLayout(QBoxLayout.BottomToTop)
         layout.setContentsMargins(0, 0, 0, 0)
         self.notification_view = NotificationView(self, title=title, body=body)
         layout.addWidget(self.notification_view)
-        layout.addSpacing(NOTIFICATION_SIZE.width() / 4)
+        layout.addSpacing(self.size.width() / 4)
         self.setLayout(layout)
         # Create a border-less transparent window
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.Tool | Qt.WA_DeleteOnClose)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setStyleSheet('background:transparent;')
         # Set it's size
-        self.setGeometry(QRect(QPoint(0, 0), QSize(NOTIFICATION_SIZE.width() * 1.2, NOTIFICATION_SIZE.height() * 1.6)))
+        self.setGeometry(QRect(QPoint(0, 0), QSize(self.size.width() * 1.2, self.size.height() * 1.6)))
         msg_geo = self.geometry()  # type: QRect
         # Move it to the bottom right corner
         # noinspection PyArgumentList
@@ -156,7 +157,7 @@ class NotificationView(QGraphicsView):
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setScene(self._scene)
         self.setStyleSheet("QGraphicsView { border-style: none; }")
-        self._inner_rect = QRect(QPoint(0, 0), NOTIFICATION_SIZE)
+        self._inner_rect = QRect(QPoint(0, 0), parent.size)
         self.arrow_middle_point = QPointF(self._inner_rect.width() / 3.5, self._inner_rect.center().y())
         self.text_body_x = self.arrow_middle_point.x()
         self._bg_rect_item = self.make_background()
