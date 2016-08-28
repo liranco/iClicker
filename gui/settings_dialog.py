@@ -156,7 +156,7 @@ class ClientSettings(BaseModeSettings):
         current_server_row.setLayout(QHBoxLayout())
         current_server_row.layout().setContentsMargins(0, 0, 0, 0)
         self.current_server_ip = QLineEdit(parent=current_server_row)
-        self.current_server_ip.setPlaceholderText("&IP Address")
+        self.current_server_ip.setPlaceholderText("IP Address")
         self.current_server_port = QSpinBox(parent=current_server_row)
         self.current_server_port.setMaximum(65535)
         self.current_server_name = None
@@ -334,25 +334,26 @@ class NotificationSettings(BaseSettings):
 class HotKeySettingsGroup(BaseSettings):
     def __init__(self, parent=None):
         super(HotKeySettingsGroup, self).__init__(title='Global Hotkey', parent=parent)
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
         self._key = hotkey_settings.key
-        self.is_enabled = QCheckBox('Enable?')
         self.ctrl_mod = QCheckBox('Ctrl')
         self.alt_mod = QCheckBox('Alt')
         self.win_mod = QCheckBox('Win')
         self.key_input = QLineEdit()
         self.key_input.keyPressEvent = self.line_key_press_event
 
-        hotkey_options = QWidget()
-        hotkey_options.setLayout(QHBoxLayout())
-        hotkey_options.layout().setContentsMargins(0, 0, 0, 0)
-        map(hotkey_options.layout().addWidget, (self.ctrl_mod, self.alt_mod, self.win_mod, QLabel('+'), self.key_input))
-        layout.addWidget(self.is_enabled)
-        layout.addWidget(hotkey_options)
+        map(layout.addWidget, (self.ctrl_mod, self.alt_mod, self.win_mod, QLabel('+'), self.key_input))
+        clear_button = QPushButton('Clear')
 
+        def clear():
+            [check_box.setChecked(False) for check_box in (self.ctrl_mod, self.alt_mod, self.win_mod)]
+            self.key_input.setText('')
+            self._key = None
+
+        clear_button.clicked.connect(clear)
+        layout.addWidget(clear_button)
         self.setLayout(layout)
 
-        self.is_enabled.setChecked(hotkey_settings.is_enabled)
         self.ctrl_mod.setChecked(hotkey_settings.ctrl)
         self.alt_mod.setChecked(hotkey_settings.alt)
         self.win_mod.setChecked(hotkey_settings.win)
@@ -368,7 +369,6 @@ class HotKeySettingsGroup(BaseSettings):
                 return
 
     def save(self):
-        hotkey_settings.is_enabled = self.is_enabled.isChecked()
         hotkey_settings.ctrl = self.ctrl_mod.isChecked()
         hotkey_settings.alt = self.alt_mod.isChecked()
         hotkey_settings.win = self.win_mod.isChecked()

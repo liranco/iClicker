@@ -11,12 +11,7 @@ user32 = ctypes.windll.user32
 class HotkeySettings(BaseSettingsGroup):
     @property
     def is_enabled(self):
-        value = self.value('is_enabled', default=False)
-        return value.lower() == 'true' if isinstance(value, basestring) else value
-
-    @is_enabled.setter
-    def is_enabled(self, value):
-        self.set_value('is_enabled', bool(value))
+        return any((self.alt, self.ctrl, self.win, self.key))
 
     @property
     def alt(self):
@@ -76,13 +71,22 @@ class HotkeyThread(QThread):
         modifier = 0
         settings = HotkeySettings()
         if settings.win:
+            print 'win', type(settings.win)
             modifier |= win32con.MOD_WIN
+            print modifier
         if settings.alt:
+            print 'alt', type(settings.alt)
             modifier |= win32con.MOD_ALT
+            print modifier
         if settings.ctrl:
+            print 'ctrl', type(settings.ctrl)
             modifier |= win32con.MOD_CONTROL
+            print modifier
+        print modifier
         self._modifiers = modifier
+
         self._key = settings.key
+        print self._key
         self._stop_run = False
 
     def run(self):
@@ -90,6 +94,7 @@ class HotkeyThread(QThread):
         # Solution taken from: http://timgolden.me.uk/python/win32_how_do_i/catch_system_wide_hotkeys.html
         by_ref = ctypes.byref
         h_wnd = self.get_window_handle()
+        print self._modifiers
         if not user32.RegisterHotKey(h_wnd, HOTKEY_ID, self._modifiers, self._key):
             print 'BADDDD'
             raise WindowsError("Unable to register id")
@@ -98,6 +103,7 @@ class HotkeyThread(QThread):
         try:
             msg = wintypes.MSG()
             while user32.GetMessageA(by_ref(msg), None, 0, 0) != 0:
+                print 'Iter'
                 if msg.message == win32con.WM_HOTKEY:
                     if msg.wParam == HOTKEY_ID:
                         self.hotkey_hit.emit()
@@ -126,4 +132,5 @@ class HotkeyThread(QThread):
 
         # Convert PyCObject to a void pointer
         h_wnd = pythonapi.PyCObject_AsVoidPtr(self.parent().winId())
+        print h_wnd
         return h_wnd
