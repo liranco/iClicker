@@ -293,7 +293,10 @@ class MainWindow(QMainWindow):
             self._update_auto_clicker_interval_timer = self.startTimer(1000)
 
     def status_updated(self, status):
-        (status_text, status_color), args = status
+        status_text, status_color = status[0]
+        args = ()
+        if len(status) > 1:
+            args = status[1]
         args = (args, ) if isinstance(args, basestring) else args
         status_text = status_text.format(*args)
         self.tray_menu.set_status_label(status_text, status_color)
