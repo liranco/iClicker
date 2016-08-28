@@ -9,8 +9,9 @@ CODE_SET_CLICK2_POS = 6
 CODE_GET_TEMPERATURE = 7
 CODE_CLICK = 8
 CODE_CLICK2 = 9
-CODE_MOVE_CLICKER = 10
-CODE_RESET_CLICKER = 11
+CODE_CUSTOM_CLICK = 10
+CODE_MOVE_CLICKER = 11
+CODE_RESET_CLICKER = 12
 
 
 VID = 0x1B4F
@@ -75,16 +76,16 @@ class Clicker(object):
         return int(self._get_data(CODE_GET_RELEASED_POS))
 
     @click_pos.setter
-    def click_pos(self, value):
-        self._send_data(CODE_SET_CLICK_POS, value)
+    def click_pos(self, angle):
+        self._send_data(CODE_SET_CLICK_POS, angle)
 
     @click2_pos.setter
-    def click2_pos(self, value):
-        self._send_data(CODE_SET_CLICK2_POS, value)
+    def click2_pos(self, angle):
+        self._send_data(CODE_SET_CLICK2_POS, angle)
 
     @released_pos.setter
-    def released_pos(self, value):
-        self._send_data(CODE_SET_RELEASED_POS, value)
+    def released_pos(self, angle):
+        self._send_data(CODE_SET_RELEASED_POS, angle)
 
     def click(self):
         self._send_code(CODE_CLICK)
@@ -92,8 +93,11 @@ class Clicker(object):
     def click2(self):
         self._send_code(CODE_CLICK2)
 
-    def move_to(self, value):
-        self._send_data(CODE_MOVE_CLICKER, value)
+    def custom_click(self, angle):
+        self._send_data(CODE_CUSTOM_CLICK, angle)
+
+    def move_to(self, angle):
+        self._send_data(CODE_MOVE_CLICKER, angle)
 
     def move_to_released_pos(self):
         self._send_code(CODE_RESET_CLICKER)

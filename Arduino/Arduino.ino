@@ -13,9 +13,11 @@ const int CODE_SET_CLICK2_POS = 6;
 const int CODE_GET_TEMPERATURE = 7;
 const int CODE_CLICK = 8;
 const int CODE_CLICK2 = 9;
-const int CODE_MOVE_CLICKER = 10;
-const int CODE_RESET_CLICKER = 11;
+const int CODE_CUSTOM_CLICK = 10;
+const int CODE_MOVE_CLICKER = 11;
+const int CODE_RESET_CLICKER = 12;
 
+/* Addresses on the EEPROM */
 const int CLICK_ADDRESS = 0;
 const int RELEASED_ADDRESS = 1;
 const int CLICK2_ADDRESS = 2;
@@ -66,6 +68,15 @@ void setup() {
   }
 }
 
+bool inServoRange(int val) {
+    return (val >= 0 && val <= 180);
+}
+
+int parseInt() {
+    while (!Serial.available()) {}
+    return Serial.parseInt();
+}
+
 void loop() {
 // put your main code here, to run repeatedly:
   if (Serial.available() > 0) {
@@ -75,8 +86,8 @@ void loop() {
         Serial.println(EEPROM.read(CLICK_ADDRESS), DEC);
         break;
       case CODE_SET_CLICK_POS: {
-        int val = Serial.parseInt();
-        if (val >= 0 && val <= 180) {
+        int val = parseInt();
+        if (inServoRange(val)) {
           EEPROM.update(CLICK_ADDRESS, val);
         }
         break;    
@@ -85,8 +96,9 @@ void loop() {
         Serial.println(EEPROM.read(RELEASED_ADDRESS), DEC);
         break;
       case CODE_SET_RELEASED_POS: {
-        int val = Serial.parseInt();
-        if (val >= 0 && val <= 180) {          EEPROM.update(RELEASED_ADDRESS, val);
+        int val = parseInt();
+        if (inServoRange(val)) {
+          EEPROM.update(RELEASED_ADDRESS, val);
         }
         break;    
       }
@@ -94,16 +106,15 @@ void loop() {
         Serial.println(EEPROM.read(CLICK2_ADDRESS), DEC);
         break;
       case CODE_SET_CLICK2_POS: {
-        int val = Serial.parseInt();
-        if ((val >= 0 && val <= 180) || val == 255) {
+        int val = parseInt();
+        if (inServoRange(val) || val == 255) {
           EEPROM.update(CLICK2_ADDRESS, val);
         }
         break;    
       }
       case CODE_MOVE_CLICKER: {
-        while (!Serial.available()) {}
-        int val = Serial.parseInt();
-        if (val >= 0 && val <= 180) {
+        int val = parseInt();
+        if (inServoRange(val)) {
             moveClicker(val);
         }
         break;
@@ -116,7 +127,13 @@ void loop() {
         break;
       case CODE_CLICK2: {
           int val = EEPROM.read(CLICK2_ADDRESS);
-          if (val >= 0 && val <= 180) {
+          if (inServoRange(val)) {
+            click(val);
+          }
+          break; }
+      case CODE_CUSTOM_CLICK: {
+          int val = parseInt();
+          if (inServoRange(val)) {
             click(val);
           }
           break; }
