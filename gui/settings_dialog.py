@@ -418,9 +418,11 @@ class ClickerCalibrator(QDialog):
         self.switch_on_position = get_spin_box_widget()
         layout.addRow("Click Position", self.switch_on_position)
 
-        self.buttons_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, parent=self)
+        self.buttons_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel | QDialogButtonBox.Reset,
+                                            parent=self)
         self.buttons_box.button(QDialogButtonBox.Save).clicked.connect(self.save)
         self.buttons_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
+        self.buttons_box.button(QDialogButtonBox.Reset).clicked.connect(self.reset_values)
         layout.addRow(self.buttons_box)
 
         self.setLayout(layout)
@@ -429,6 +431,12 @@ class ClickerCalibrator(QDialog):
 
     def test_value(self, new_value):
         self.clicker.custom_click(new_value, self.neutral_position.spin_box.value())
+
+    def reset_values(self):
+        self.clicker.disable_click2()
+        self.clicker.click_pos = 120
+        self.clicker.released_pos = 90
+        self.fill_values()
 
     def fill_values(self):
         is_switch_on_off = self.clicker.is_click2_enabled()

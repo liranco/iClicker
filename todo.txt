@@ -1,2 +1,2 @@
-Calibrate - instead of 'test', do 'test click', add 'reset' button
 Disable notification
+Show temperature in tooltip
