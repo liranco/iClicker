@@ -27,9 +27,20 @@ class Clicker(object):
 
     @contextmanager
     def _serial_interaction(self, code):
-        from serial import Serial
+        from time import sleep
+
+        from serial import Serial, SerialException
         port = self.port or self.find_clicker_port()
-        serial = Serial(port)
+        serial = None
+        a = 0
+        while not serial and a < 10:
+            try:
+                serial = Serial(port)
+            except SerialException:
+                sleep(1)
+                a += 1
+        if not serial:
+            raise SerialException("Couldn't connect to the clicker at port {}".format(port))
         serial.write(str(code) + '\n')
         yield serial
         serial.close()
