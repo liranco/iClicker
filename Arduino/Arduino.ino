@@ -43,9 +43,12 @@ void moveClicker(int pos, bool attach = true, bool detach = true) {
     clicker.detach();
 }
 
-void click(int pos) {
+void click(int pos, int release = 255) {
   moveClicker(pos, true, false);
-  moveClicker(EEPROM.read(RELEASED_ADDRESS), false, true);
+  if (release == 255) {
+    release = EEPROM.read(RELEASED_ADDRESS);
+  }
+  moveClicker(release, false, true);
 }
 
 void initEEPROMIfNeeded() {
@@ -132,9 +135,10 @@ void loop() {
           }
           break; }
       case CODE_CUSTOM_CLICK: {
-          int val = parseInt();
-          if (inServoRange(val)) {
-            click(val);
+          int click_pos = parseInt();
+          int release_pos = parseInt();
+          if (inServoRange(click_pos) && inServoRange(release_pos)) {
+            click(click_pos, release_pos);
           }
           break; }
       case CODE_RESET_CLICKER:

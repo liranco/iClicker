@@ -1,9 +1,10 @@
-from PySide.QtGui import *
 from PySide.QtCore import *
-from settings import Settings, ServerSettings, ClientSettings
-from notification_widget import NotificationSettings
-from hotkey_listener import HotkeySettings
+from PySide.QtGui import *
+
 from consts import *
+from hotkey_listener import HotkeySettings
+from notification_widget import NotificationSettings
+from settings import Settings, ServerSettings, ClientSettings
 
 settings = Settings()
 server_settings = ServerSettings()
@@ -385,7 +386,7 @@ class ClickerCalibrator(QDialog):
 
         self.clicker = Clicker()
 
-        def get_spin_box_widget():
+        def get_spin_box_widget(show_test_button=True):
             widget = QWidget(self)
             widget.setLayout(QHBoxLayout())
             widget.layout().setContentsMargins(0, 0, 0, 0)
@@ -394,9 +395,10 @@ class ClickerCalibrator(QDialog):
             spin_box.setMaximum(180)
             spin_box.setSuffix(u'\u00B0')
             widget.layout().addWidget(spin_box)
-            test_button = QPushButton('Test', widget)
-            test_button.clicked.connect(lambda: self.test_value(spin_box.value()))
-            widget.layout().addWidget(test_button)
+            if show_test_button:
+                test_button = QPushButton('Test', widget)
+                test_button.clicked.connect(lambda: self.test_value(spin_box.value()))
+                widget.layout().addWidget(test_button)
             widget.spin_box = spin_box
             widget.setEnabled = lambda enabled: [val.setEnabled(enabled) for val in (spin_box, test_button)]
             return widget
@@ -411,7 +413,7 @@ class ClickerCalibrator(QDialog):
         layout.addRow("Click Off Position", self.switch_off_position)
         self.is_switch_on_off.stateChanged.connect(
             lambda: self.switch_off_position.setEnabled(self.is_switch_on_off.isChecked()))
-        self.neutral_position = get_spin_box_widget()
+        self.neutral_position = get_spin_box_widget(show_test_button=False)
         layout.addRow("Neutral Position", self.neutral_position)
         self.switch_on_position = get_spin_box_widget()
         layout.addRow("Click Position", self.switch_on_position)
@@ -426,8 +428,7 @@ class ClickerCalibrator(QDialog):
         self.fill_values()
 
     def test_value(self, new_value):
-        print new_value, type(new_value)
-        self.clicker.move_to(new_value)
+        self.clicker.custom_click(new_value, self.neutral_position.spin_box.value())
 
     def fill_values(self):
         is_switch_on_off = self.clicker.is_click2_enabled()

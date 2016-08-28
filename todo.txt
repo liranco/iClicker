@@ -1,1 +1,2 @@
-Calibrate - instead of 'test', do 'test click'
+Calibrate - instead of 'test', do 'test click', add 'reset' button
+Disable notification

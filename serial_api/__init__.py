@@ -50,9 +50,10 @@ class Clicker(object):
         with self._serial_interaction(code):
             pass
 
-    def _send_data(self, code, data):
+    def _send_data(self, code, *data):
         with self._serial_interaction(code) as serial:
-            serial.write(str(data) + '\n')
+            for obj in data:
+                serial.write(str(obj) + '\n')
 
     def _get_data(self, code):
         with self._serial_interaction(code) as serial:
@@ -93,8 +94,8 @@ class Clicker(object):
     def click2(self):
         self._send_code(CODE_CLICK2)
 
-    def custom_click(self, angle):
-        self._send_data(CODE_CUSTOM_CLICK, angle)
+    def custom_click(self, click_angle, release_angle):
+        self._send_data(CODE_CUSTOM_CLICK, click_angle, release_angle)
 
     def move_to(self, angle):
         self._send_data(CODE_MOVE_CLICKER, angle)
@@ -103,7 +104,6 @@ class Clicker(object):
         self._send_code(CODE_RESET_CLICKER)
 
     def is_click2_enabled(self):
-        print self.click2_pos
         return 0 <= self.click2_pos <= 180
 
     def disable_click2(self):
