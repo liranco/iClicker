@@ -143,16 +143,13 @@ class MainWindow(QMainWindow):
 
     def start_global_hotkey(self):
         if self.global_hotkey_thread:
-            print 'Stopping'
             self.global_hotkey_thread.stop()
+            self.global_hotkey_thread.wait()
             self.global_hotkey_thread = None
-            print 'Stopped'
         if HotkeySettings().is_enabled:
-            print 'Starting'
             self.global_hotkey_thread = HotkeyThread(self)
             self.global_hotkey_thread.hotkey_hit.connect(self.click)
             self.global_hotkey_thread.start()
-            print 'Started'
 
     def show_auto_click(self):
         interval, accepted = QInputDialog().getInt(self,

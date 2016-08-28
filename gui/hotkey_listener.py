@@ -1,6 +1,6 @@
 import ctypes
 import win32con
-from ctypes import wintypes
+import win32gui
 from PySide.QtCore import *
 from settings import BaseSettingsGroup
 
@@ -71,66 +71,34 @@ class HotkeyThread(QThread):
         modifier = 0
         settings = HotkeySettings()
         if settings.win:
-            print 'win', type(settings.win)
             modifier |= win32con.MOD_WIN
-            print modifier
         if settings.alt:
-            print 'alt', type(settings.alt)
             modifier |= win32con.MOD_ALT
-            print modifier
         if settings.ctrl:
-            print 'ctrl', type(settings.ctrl)
             modifier |= win32con.MOD_CONTROL
-            print modifier
-        print modifier
         self._modifiers = modifier
-
         self._key = settings.key
-        print self._key
         self._stop_run = False
 
     def run(self):
 
         # Solution taken from: http://timgolden.me.uk/python/win32_how_do_i/catch_system_wide_hotkeys.html
-        by_ref = ctypes.byref
-        h_wnd = self.get_window_handle()
-        print self._modifiers
-        if not user32.RegisterHotKey(h_wnd, HOTKEY_ID, self._modifiers, self._key):
-            print 'BADDDD'
+        if not user32.RegisterHotKey(None, HOTKEY_ID, self._modifiers, self._key):
             raise WindowsError("Unable to register id")
-        print 'Registered'
-
         try:
-            msg = wintypes.MSG()
-            while user32.GetMessageA(by_ref(msg), None, 0, 0) != 0:
-                print 'Iter'
-                if msg.message == win32con.WM_HOTKEY:
-                    if msg.wParam == HOTKEY_ID:
-                        self.hotkey_hit.emit()
-
-                user32.TranslateMessage(by_ref(msg))
-                user32.DispatchMessageA(by_ref(msg))
-
+            while True:
+                user32.MsgWaitForMultipleObjects(0, None, False, 10, win32con.QS_HOTKEY)
+                if self._stop_run:
+                    break
+                status, msg = win32gui.PeekMessage(None, 0, 0, win32con.PM_REMOVE)
+                if status != 0:
+                    _, message_type, w_param, _, _, _ = msg
+                    if message_type == win32con.WM_HOTKEY:
+                        if w_param == HOTKEY_ID:
+                            self.hotkey_hit.emit()
         finally:
-            print 'Unregisteered'
             user32.UnregisterHotKey(None, HOTKEY_ID)
 
     def stop(self):
         user32.UnregisterHotKey(None, HOTKEY_ID)
         self._stop_run = True
-        user32.keybd_event(None, 0, 0, 0)
-        user32.keybd_event(None, 0, 0x0002, 0)
-
-
-    def get_window_handle(self):
-        # Imports all we need
-        from ctypes import pythonapi, c_void_p, py_object
-
-        # Setup arguments and return types
-        pythonapi.PyCObject_AsVoidPtr.restype = c_void_p
-        pythonapi.PyCObject_AsVoidPtr.argtypes = [py_object]
-
-        # Convert PyCObject to a void pointer
-        h_wnd = pythonapi.PyCObject_AsVoidPtr(self.parent().winId())
-        print h_wnd
-        return h_wnd

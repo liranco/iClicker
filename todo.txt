@@ -1,2 +1,1 @@
-When canceling settings exception is risen (hotkeys?)
 Calibrate - instead of 'test', do 'test click'
