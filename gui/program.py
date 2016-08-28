@@ -1,13 +1,14 @@
 import os
 import sys
-from PySide.QtGui import *
+
 from PySide.QtCore import *
+from PySide.QtGui import *
+
+from consts import *
+from hotkey_listener import HotkeyThread, HotkeySettings
+from notification_widget import NotificationDialog
 from settings import Settings, ServerSettings, ClientSettings
 from settings_dialog import SettingsDialog
-from notification_widget import NotificationDialog
-from hotkey_listener import HotkeyThread, HotkeySettings
-from consts import *
-
 
 STATUS_CLIENT_NOT_SET = (u"Server Not Configured", Qt.red)
 STATUS_CLIENT_CONNECTING = (u'Connecting to {}...', Qt.darkYellow)
@@ -191,10 +192,19 @@ class MainWindow(QMainWindow):
             title, message = self._notifications_queue[0]
             self.notification_widget = NotificationDialog(self, title, message, len(self._notifications_queue) - 1,
                                                           self._notifications_passed)
+            self._set_notification_temperature()
             self._notifications_passed += 1
             self.notification_widget.exec_()
             self._notifications_queue.pop(0)
         self._notifications_passed = 0
+
+    def _set_notification_temperature(self):
+        if not self.notification_widget:
+            return
+        if self._temperature:
+            self.notification_widget.set_circle_text(u'{}\u00b0C'.format(int(round(self._temperature))))
+        else:
+            self.notification_widget.set_circle_text('?')
 
     def stop_server(self):
         self.disconnect_client()
@@ -263,6 +273,7 @@ class MainWindow(QMainWindow):
             self.tray_menu.set_temperature(self._temperature)
         else:
             self.tray_menu.set_temperature(None)
+        self._set_notification_temperature()
 
     def handle_show_notification(self, title, message, **_):
         self.update_notifications_signal.emit((title, message))

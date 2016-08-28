@@ -1,8 +1,7 @@
-import sys
-from PySide.QtGui import *
 from PySide.QtCore import *
-from settings import BaseSettingsGroup
+from PySide.QtGui import *
 
+from settings import BaseSettingsGroup
 
 NOTIFICATION_SIZE_WIDTH = 350
 NOTIFICATION_SIZE_RATIO = 2
@@ -133,6 +132,9 @@ class NotificationDialog(QDialog):
             self.close()
         super(NotificationDialog, self).timerEvent(event)
 
+    def set_circle_text(self, text):
+        self.notification_view.set_circle_text(text)
+
     def closeEvent(self, event):
         if self._closing:
             if self.duration_reached_timer:
@@ -157,16 +159,22 @@ class NotificationView(QGraphicsView):
         self._inner_rect = QRect(QPoint(0, 0), NOTIFICATION_SIZE)
         self.arrow_middle_point = QPointF(self._inner_rect.width() / 3.5, self._inner_rect.center().y())
         self.text_body_x = self.arrow_middle_point.x()
-        self.circle_text = u'26\u00b0C'
         self._bg_rect_item = self.make_background()
         self.title_text_item = None
         arrow = self.create_arrow(self._inner_rect.topLeft(), self.arrow_middle_point, self._inner_rect.bottomLeft())
-        self.make_text(self.circle_text, 15, self.make_circle(arrow))
+        self._circle = self.make_circle(arrow)
+        self._circle_text = self.make_text('', 15, self._circle)
         self.make_close_circle_button()
         self.make_title_text(title[:25])
         self.make_body_text(body)
         self._notifications_count_text = None
         parent.notifications_count_updated.connect(self.notifications_count_updated)
+
+    def set_circle_text(self, text):
+        self._circle_text.setPlainText(text)
+        text_rect = self._circle_text.boundingRect()
+        text_rect.moveCenter(self._circle_text.parentItem().boundingRect().center())
+        self._circle_text.setPos(text_rect.topLeft())
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
