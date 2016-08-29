@@ -1,6 +1,7 @@
 from PySide.QtCore import *
 from PySide.QtGui import *
 
+from Mazgan import SOFTWARE_NAME
 from consts import *
 from hotkey_listener import HotkeySettings
 from notification_widget import NotificationSettings
@@ -16,7 +17,7 @@ hotkey_settings = HotkeySettings()
 class SettingsDialog(QDialog):
     def __init__(self, parent):
         super(SettingsDialog, self).__init__(parent)
-        self.setWindowTitle('Mazgan Settings')
+        self.setWindowTitle('{} Settings'.format(SOFTWARE_NAME))
         self.setWindowFlags(Qt.Window)
         layout = QVBoxLayout()
         self.current_mode = None

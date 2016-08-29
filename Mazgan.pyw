@@ -1,5 +1,7 @@
 from optparse import OptionParser
 
+SOFTWARE_NAME = 'IClick'
+
 
 def main():
     parser = OptionParser()

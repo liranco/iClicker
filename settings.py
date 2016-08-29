@@ -1,5 +1,6 @@
 from PySide.QtCore import QSettings
 
+from Mazgan import SOFTWARE_NAME
 from consts import *
 
 
@@ -16,7 +17,7 @@ class Settings(QSettings):
     def __init__(self):
         if Settings._singleton_object is self:
             return
-        super(Settings, self).__init__(QSettings.UserScope, "MazganINC", 'Mazgan')
+        super(Settings, self).__init__(QSettings.UserScope, SOFTWARE_NAME, SOFTWARE_NAME)
         self.setIniCodec('UTF-8')
         self.setFallbacksEnabled(False)
 

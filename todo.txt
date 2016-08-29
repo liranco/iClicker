@@ -1,1 +1,2 @@
 Show temperature in tooltip
+Bug when restarting server - auto click stops

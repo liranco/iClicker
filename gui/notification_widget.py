@@ -37,7 +37,7 @@ class NotificationSettings(BaseSettingsGroup):
 
     @property
     def notification_expires(self):
-        value = self.value("notification_expires", True)
+        value = self.value("notification_expires", False)
         if isinstance(value, basestring):
             value = value.lower() == 'true'
         assert isinstance(value, bool)

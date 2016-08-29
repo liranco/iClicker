@@ -4,6 +4,7 @@ import sys
 from PySide.QtCore import *
 from PySide.QtGui import *
 
+from Mazgan import SOFTWARE_NAME
 from consts import *
 from hotkey_listener import HotkeyThread, HotkeySettings
 from notification_widget import NotificationDialog
@@ -31,7 +32,7 @@ class Menu(QMenu):
         """
         :type parent: MainWindow
         """
-        super(Menu, self).__init__("Mazgan Clicker", parent=parent)
+        super(Menu, self).__init__(SOFTWARE_NAME, parent=parent)
         self.text, self.color = (None, None)
         self.status_label = QLabel(' ' * 20)
         status_label_action = QWidgetAction(self)
