@@ -275,8 +275,10 @@ class MainWindow(QMainWindow):
         if self.client:
             self._temperature = self.client.get_temperature()
             self.tray_menu.set_temperature(self._temperature)
+            self.tray.setToolTip(u'{} ({}\u00b0C)'.format(self.tray_menu.text, int(round(self._temperature))))
         else:
             self.tray_menu.set_temperature(None)
+            self.tray.setToolTip(self.tray_menu)
         self._set_notification_temperature()
 
     def handle_show_notification(self, title, message, **_):
@@ -312,7 +314,7 @@ class MainWindow(QMainWindow):
         args = (args, ) if isinstance(args, basestring) else args
         status_text = status_text.format(*args)
         self.tray_menu.set_status_label(status_text, status_color)
-        self.tray.setToolTip(status_text)
+        self.tray.setToolTip(self.tray_menu.text)
 
     def closeEvent(self, event):
         if self._client_connection_check_timer:
