@@ -1,12 +1,13 @@
 import hashlib
 import hmac
 import json
+import time
+from socket import *
+from time import time
+
+from consts import *
 from server import BaseServerHandler, _init_server, Server
 from settings import ClientSettings
-from consts import *
-from time import time
-from socket import *
-import time
 
 
 def find_servers():
@@ -120,10 +121,6 @@ class Client(object):
             raise BadPasswordException(data['name'], self.server_address, self.port)
         return response
 
-    def dance(self):
-        self.send_receive(CODE_SAY_HELLO)
-        print self.server_info()
-
     def server_info(self):
         return self.send_receive(CODE_GET_SERVER_INFO)[1]
 
@@ -152,12 +149,3 @@ def run_client_notifications_receiver(threaded=True, handlers=None):
         print err
         return None
     return _init_server(server, threaded)
-
-
-if __name__ == '__main__':
-    client = Client()
-    print "Connecting"
-    client.connect()
-    print "Dancing"
-    client.dance()
-    client.close()

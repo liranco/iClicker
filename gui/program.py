@@ -46,20 +46,19 @@ class Menu(QMenu):
         self.addAction(temperature_label_action)
 
         self.addSeparator()
-        dance_action = self.addAction('Dance')  # type: QAction
         click_action = self.addAction('Click')
         self.auto_click_action = self.addAction('')
         self.set_auto_click_text(None)
-        dance_action.triggered.connect(lambda: parent.client.dance())
         click_action.triggered.connect(lambda: parent.click())
         self.auto_click_action.triggered.connect(parent.show_auto_click)
-        self.set_enabled.connect(dance_action.setEnabled)
         self.set_enabled.connect(click_action.setEnabled)
         self.set_enabled.connect(self.auto_click_action.setEnabled)
         self.set_enabled.emit(False)
         self.addSeparator()
         settings_action = self.addAction('Settings')
+        about_action = self.addAction('About')
         settings_action.triggered.connect(parent.show_settings)
+        about_action.triggered.connect(parent.show_settings)
         exit_action = self.addAction('Exit')
         exit_action.triggered.connect(parent.close)
 
