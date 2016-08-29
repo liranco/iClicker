@@ -3,7 +3,6 @@ import hmac
 import json
 import time
 from socket import *
-from time import time
 
 from consts import *
 from server import BaseServerHandler, _init_server, Server

@@ -51,7 +51,8 @@ class NotificationSettings(BaseSettingsGroup):
 class NotificationDialog(QDialog):
     notifications_count_updated = Signal()
 
-    def __init__(self, parent, title, body, remaining_notifications=None, this_notification_count=1, scale=1):
+    def __init__(self, parent, title, body, remaining_notifications=None, this_notification_count=1, scale=1,
+                 duration=None):
         super(NotificationDialog, self).__init__(parent)
         self.size = NOTIFICATION_SIZE * scale  # type: QSize
         layout = QBoxLayout(QBoxLayout.BottomToTop)
@@ -80,7 +81,7 @@ class NotificationDialog(QDialog):
         self.opacity_animator = QPropertyAnimation(self, 'windowOpacity', self)
         self.setMouseTracking(True)
         self.animate_in()
-        self.duration_reached_timer = self.startTimer(NotificationSettings().duration * 1000)
+        self.duration_reached_timer = self.startTimer(duration or (NotificationSettings().duration * 1000))
         self.remaining_notifications = remaining_notifications or 0
         self.this_notification_count = this_notification_count or 0
         self.notifications_count_updated.emit()
@@ -161,21 +162,20 @@ class NotificationView(QGraphicsView):
         self.arrow_middle_point = QPointF(self._inner_rect.width() / 3.5, self._inner_rect.center().y())
         self.text_body_x = self.arrow_middle_point.x()
         self._bg_rect_item = self.make_background()
-        self.title_text_item = None
         arrow = self.create_arrow(self._inner_rect.topLeft(), self.arrow_middle_point, self._inner_rect.bottomLeft())
-        self._circle = self.make_circle(arrow)
-        self._circle_text = self.make_text('', 15, self._circle)
+        self.circle = self.make_circle(arrow)
+        self.circle_text = self.make_text('', 15, self.circle)
         self.make_close_circle_button()
-        self.make_title_text(title[:25])
-        self.make_body_text(body)
+        self.title_text_item = self.make_title_text(title[:25])
+        self.body_text_item = self.make_body_text(body)
         self._notifications_count_text = None
         parent.notifications_count_updated.connect(self.notifications_count_updated)
 
     def set_circle_text(self, text):
-        self._circle_text.setPlainText(text)
-        text_rect = self._circle_text.boundingRect()
-        text_rect.moveCenter(self._circle_text.parentItem().boundingRect().center())
-        self._circle_text.setPos(text_rect.topLeft())
+        self.circle_text.setPlainText(text)
+        text_rect = self.circle_text.boundingRect()
+        text_rect.moveCenter(self.circle_text.parentItem().boundingRect().center())
+        self.circle_text.setPos(text_rect.topLeft())
 
     def make_background(self):
         gradient = QRadialGradient(self._inner_rect.center(), 200)
@@ -266,12 +266,13 @@ class NotificationView(QGraphicsView):
         text_item = self.make_text(text, 16, self._bg_rect_item)
         text_item.setPos(QPoint(self.text_body_x, self._inner_rect.height() / 5))
         text_item.setTextWidth(self._inner_rect.width() - self.text_body_x)
-        self.title_text_item = text_item
+        return text_item
 
     def make_body_text(self, text):
         text_item = self.make_text(text, 12, self._bg_rect_item, QColor(Qt.darkGray).darker(), QFont.Normal)
         text_item.setPos(QPoint(self.text_body_x, self.title_text_item.pos().y() + 30))
         text_item.setTextWidth(self._inner_rect.width() - self.text_body_x)
+        return text_item
 
     def notifications_count_updated(self):
         this, remaining = self.parent().this_notification_count, self.parent().remaining_notifications

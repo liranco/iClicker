@@ -58,7 +58,7 @@ class Menu(QMenu):
         settings_action = self.addAction('Settings')
         about_action = self.addAction('About')
         settings_action.triggered.connect(parent.show_settings)
-        about_action.triggered.connect(parent.show_settings)
+        about_action.triggered.connect(parent.show_about)
         exit_action = self.addAction('Exit')
         exit_action.triggered.connect(parent.close)
 
@@ -141,6 +141,15 @@ class MainWindow(QMainWindow):
                 self.stop_server()
                 self.connect_to_server()
             self.start_global_hotkey()
+
+    def show_about(self):
+        dialog = NotificationDialog(self, u"{}!".format(SOFTWARE_NAME),
+                                    u"Thank you for a wonderful time!\r\n"
+                                    u"\t\u2014 Liran Cohen\r\n"
+                                    u"\t\t2016", None, None, 1, 10 * 1000)
+        dialog.notification_view.circle_text.setFont(QFont('Arial', 30, QFont.Normal))
+        dialog.set_circle_text(u'\u2746')
+        dialog.exec_()
 
     def stop_global_hotkey(self):
         if self.global_hotkey_thread:
@@ -277,7 +286,7 @@ class MainWindow(QMainWindow):
             self.tray.setToolTip(u'{} ({}\u00b0C)'.format(self.tray_menu.text, int(round(self._temperature))))
         else:
             self.tray_menu.set_temperature(None)
-            self.tray.setToolTip(self.tray_menu)
+            self.tray.setToolTip(self.tray_menu.text)
         self._set_notification_temperature()
 
     def handle_show_notification(self, title, message, **_):

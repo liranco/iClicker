@@ -1,6 +1,6 @@
 from optparse import OptionParser
 
-SOFTWARE_NAME = 'IClick'
+SOFTWARE_NAME = 'iClicker'
 
 
 def main():
