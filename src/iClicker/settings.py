@@ -1,6 +1,6 @@
 from PySide.QtCore import QSettings
 
-from Mazgan import SOFTWARE_NAME
+from ClickerGUI import SOFTWARE_NAME
 from consts import *
 
 

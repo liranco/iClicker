@@ -4,7 +4,7 @@ import sys
 from PySide.QtCore import *
 from PySide.QtGui import *
 
-from Mazgan import SOFTWARE_NAME
+from ClickerGUI import SOFTWARE_NAME
 from consts import *
 from hotkey_listener import HotkeyThread, HotkeySettings
 from notification_widget import NotificationDialog

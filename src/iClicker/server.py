@@ -1,8 +1,6 @@
 import hashlib
 import hmac
 import json
-import os
-import socket
 import time
 from SocketServer import *
 from threading import Thread, Event

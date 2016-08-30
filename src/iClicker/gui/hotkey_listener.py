@@ -1,7 +1,9 @@
 import ctypes
-import win32con
 import win32gui
+
+import win32con
 from PySide.QtCore import *
+
 from settings import BaseSettingsGroup
 
 HOTKEY_ID = 9119
