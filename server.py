@@ -1,13 +1,14 @@
+import hashlib
+import hmac
+import json
+import os
+import socket
+import time
+from SocketServer import *
+from threading import Thread, Event
+
 from consts import *
 from settings import ServerSettings
-from threading import Thread, Event
-from SocketServer import *
-import socket
-import json
-import hmac
-import hashlib
-import os
-import time
 
 
 class UDPBroadcastsHandler(DatagramRequestHandler):
@@ -118,8 +119,12 @@ class MainServerHandler(BaseServerHandler):
         return dict(message='Hello from {}'.format(ServerSettings().server_name))
 
     def handle_click(self, name, **_):
-        self.server.click()
-        self.server.push(CODE_SHOW_NOTIFICATION, title='Click!', message='{} has sent a click command'.format(name))
+        try:
+            self.server.click()
+        except NoClickerError as ex:
+            self.server.push(CODE_SHOW_NOTIFICATION, title='Error!', message=str(ex))
+        else:
+            self.server.push(CODE_SHOW_NOTIFICATION, title='Click!', message='{} has sent a click command'.format(name))
 
     def handle_set_auto_clicker(self, name, interval, **_):
         assert isinstance(interval, (int, type(None)))
@@ -194,21 +199,30 @@ class MainServer(Server):
         self.push(CODE_AUTO_CLICKER_CHANGED, new_interval=interval)
 
     def click(self):
+        import datetime
+        print 'Click', datetime.datetime.now()
         if self.auto_clicker_thread:
             self.auto_clicker_thread.seconds_left_for_interval = self.auto_clicker_thread.interval
-        if self._clicker.is_click2_enabled():
-            if self._is_last_clicked_on:
-                self._clicker.click2()
-                self._is_last_clicked_on = False
+        try:
+            if self._clicker.is_click2_enabled():
+                if self._is_last_clicked_on:
+                    self._clicker.click2()
+                    self._is_last_clicked_on = False
+                else:
+                    self._clicker.click()
+                    self._is_last_clicked_on = True
             else:
                 self._clicker.click()
-                self._is_last_clicked_on = True
+        except:
+            raise NoClickerError("Error communicating with the clicker. It's possible it's not connected.")
         else:
-            self._clicker.click()
-        self.push(CODE_CLICK_HAPPENED)
+            self.push(CODE_CLICK_HAPPENED)
 
     def update_temperature(self):
-        self.temperature = self._clicker.temperature
+        try:
+            self.temperature = self._clicker.temperature
+        except:
+            self.temperature = None
 
     def server_close(self):
         if self.auto_clicker_thread:
@@ -269,7 +283,9 @@ class RepeatingThread(Thread):
                 self.method()
 
 
-
 if __name__ == '__main__':
     answer_search_requests(True)
     run_server(False)
+
+
+class NoClickerError(Exception): pass

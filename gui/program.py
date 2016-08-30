@@ -117,8 +117,9 @@ class MainWindow(QMainWindow):
         self._notifications_passed = 0
         self.update_notifications_signal.connect(lambda message: self._show_notification(*message))
         self.click_occurred_signal.connect(lambda: self.click_occurred_signal_receiver())
+        self.mode = self.settings.mode
         self.auto_clicker_changed_signal.connect(self.auto_clicker_changed_receiver)
-        if self.settings.mode == SERVER_MODE:
+        if self.mode == SERVER_MODE:
             self.start_server()
         else:
             self.connect_to_server()
@@ -132,12 +133,12 @@ class MainWindow(QMainWindow):
             self.settings_dialog.activateWindow()
         else:
             self.settings_dialog = SettingsDialog(self)
-            new_mode = self.settings_dialog.exec_()
+            self.mode = self.settings_dialog.exec_()
             self.settings_dialog.deleteLater()
             self.settings_dialog = None
-            if new_mode == SERVER_MODE:
+            if self.mode == SERVER_MODE:
                 self.start_server()
-            elif new_mode == CLIENT_MODE:
+            elif self.mode == CLIENT_MODE:
                 self.stop_server()
                 self.connect_to_server()
             self.start_global_hotkey()
@@ -283,7 +284,10 @@ class MainWindow(QMainWindow):
         if self.client:
             self._temperature = self.client.get_temperature()
             self.tray_menu.set_temperature(self._temperature)
-            self.tray.setToolTip(u'{} ({}\u00b0C)'.format(self.tray_menu.text, int(round(self._temperature))))
+            if self._temperature:
+                self.tray.setToolTip(u'{} ({}\u00b0C)'.format(self.tray_menu.text, int(round(self._temperature))))
+            else:
+                self.tray.setToolTip(u"{} (Couldn't get temperature)".format(self.tray_menu.text))
         else:
             self.tray_menu.set_temperature(None)
             self.tray.setToolTip(self.tray_menu.text)
